@@ -169,7 +169,7 @@ fn sigma_compiler_impl(
     let group_name = &spec.group_name;
 
     let group_types = quote! {
-        pub type Scalar = <super::#group_name as Group>::Scalar;
+        pub type Scalar = <super::#group_name as super::Group>::Scalar;
         pub type Point = super::#group_name;
     };
 
@@ -231,8 +231,6 @@ fn sigma_compiler_impl(
     quote! {
         #[allow(non_snake_case)]
         pub mod #proto_name {
-            use super::*;
-
             #group_types
             #params_def
             #witness_def
