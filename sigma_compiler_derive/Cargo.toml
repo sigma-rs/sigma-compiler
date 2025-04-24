@@ -9,3 +9,9 @@ proc-macro = true
 [dependencies]
 syn = { version = "2.0", features = ["extra-traits"] }
 quote = "1.0"
+
+[features]
+# Dump (to stdout) the public params on both the prover's and verifier's
+# side.  They should match.
+dump = []
+# default = ["dump"]

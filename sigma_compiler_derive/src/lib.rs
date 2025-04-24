@@ -182,57 +182,63 @@ fn sigma_compiler_impl(
         pub_params_fields.push_scalars(&spec.pub_scalars);
 
         let decls = pub_params_fields.field_decls();
-        let dump_chunks = pub_params_fields.fields.iter().map(|f| match f {
-            StructField::Scalar(id) => quote! {
-                print!("  {}: ", stringify!(#id));
-                Params::dump_scalar(&self.#id);
-                println!("");
-            },
-            StructField::VecScalar(id) => quote! {
-                print!("  {}: [", stringify!(#id));
-                for s in self.#id.iter() {
-                    print!("    ");
-                    Params::dump_scalar(s);
-                    println!(",");
+        let dump_impl = if cfg!(feature = "dump") {
+            let dump_chunks = pub_params_fields.fields.iter().map(|f| match f {
+                StructField::Scalar(id) => quote! {
+                    print!("  {}: ", stringify!(#id));
+                    Params::dump_scalar(&self.#id);
+                    println!("");
+                },
+                StructField::VecScalar(id) => quote! {
+                    print!("  {}: [", stringify!(#id));
+                    for s in self.#id.iter() {
+                        print!("    ");
+                        Params::dump_scalar(s);
+                        println!(",");
+                    }
+                    println!("  ]");
+                },
+                StructField::Point(id) => quote! {
+                    print!("  {}: ", stringify!(#id));
+                    Params::dump_point(&self.#id);
+                    println!("");
+                },
+                StructField::VecPoint(id) => quote! {
+                    print!("  {}: [", stringify!(#id));
+                    for p in self.#id.iter() {
+                        print!("    ");
+                        Params::dump_point(p);
+                        println!(",");
+                    }
+                    println!("  ]");
+                },
+            });
+            quote! {
+                impl Params {
+                    fn dump_scalar(s: &Scalar) {
+                        let bytes: &[u8] = &s.to_repr();
+                        print!("{:02x?}", bytes);
+                    }
+
+                    fn dump_point(p: &Point) {
+                        let bytes: &[u8] = &p.to_bytes();
+                        print!("{:02x?}", bytes);
+                    }
+
+                    pub fn dump(&self) {
+                        #(#dump_chunks)*
+                    }
                 }
-                println!("  ]");
-            },
-            StructField::Point(id) => quote! {
-                print!("  {}: ", stringify!(#id));
-                Params::dump_point(&self.#id);
-                println!("");
-            },
-            StructField::VecPoint(id) => quote! {
-                print!("  {}: [", stringify!(#id));
-                for p in self.#id.iter() {
-                    print!("    ");
-                    Params::dump_point(p);
-                    println!(",");
-                }
-                println!("  ]");
-            },
-        });
+            }
+        } else {
+            quote! {}
+        };
         quote! {
-            #[derive(Debug)]
             pub struct Params {
                 #decls
             }
 
-            impl Params {
-                fn dump_scalar(s: &Scalar) {
-                    let bytes: &[u8] = &s.to_repr();
-                    print!("{:02x?}", bytes);
-                }
-
-                fn dump_point(p: &Point) {
-                    let bytes: &[u8] = &p.to_bytes();
-                    print!("{:02x?}", bytes);
-                }
-
-                pub fn dump(&self) {
-                    #(#dump_chunks)*
-                }
-            }
+            #dump_impl
         }
     };
 
@@ -254,11 +260,18 @@ fn sigma_compiler_impl(
 
     // Generate the (currently dummy) prove function
     let prove_func = if emit_prover {
-        quote! {
-            pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
+        let dumper = if cfg!(feature = "dump") {
+            quote! {
                 println!("prover params = {{");
                 params.dump();
                 println!("}}");
+            }
+        } else {
+            quote! {}
+        };
+        quote! {
+            pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
+                #dumper
                 Ok(Vec::<u8>::default())
             }
         }
@@ -268,11 +281,18 @@ fn sigma_compiler_impl(
 
     // Generate the (currently dummy) verify function
     let verify_func = if emit_verifier {
-        quote! {
-            pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
+        let dumper = if cfg!(feature = "dump") {
+            quote! {
                 println!("verifier params = {{");
                 params.dump();
                 println!("}}");
+            }
+        } else {
+            quote! {}
+        };
+        quote! {
+            pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
+                #dumper
                 Ok(())
             }
         }
@@ -281,11 +301,18 @@ fn sigma_compiler_impl(
     };
 
     // Output the generated module for this protocol
+    let dump_use = if cfg!(feature = "dump") {
+        quote! {
+            use ff::PrimeField;
+            use group::GroupEncoding;
+        }
+    } else {
+        quote! {}
+    };
     quote! {
         #[allow(non_snake_case)]
         pub mod #proto_name {
-            use ff::PrimeField;
-            use group::GroupEncoding;
+            #dump_use
 
             #group_types
             #params_def
