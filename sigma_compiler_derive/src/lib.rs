@@ -182,9 +182,56 @@ fn sigma_compiler_impl(
         pub_params_fields.push_scalars(&spec.pub_scalars);
 
         let decls = pub_params_fields.field_decls();
+        let dump_chunks = pub_params_fields.fields.iter().map(|f| match f {
+            StructField::Scalar(id) => quote! {
+                print!("  {}: ", stringify!(#id));
+                Params::dump_scalar(&self.#id);
+                println!("");
+            },
+            StructField::VecScalar(id) => quote! {
+                print!("  {}: [", stringify!(#id));
+                for s in self.#id.iter() {
+                    print!("    ");
+                    Params::dump_scalar(s);
+                    println!(",");
+                }
+                println!("  ]");
+            },
+            StructField::Point(id) => quote! {
+                print!("  {}: ", stringify!(#id));
+                Params::dump_point(&self.#id);
+                println!("");
+            },
+            StructField::VecPoint(id) => quote! {
+                print!("  {}: [", stringify!(#id));
+                for p in self.#id.iter() {
+                    print!("    ");
+                    Params::dump_point(p);
+                    println!(",");
+                }
+                println!("  ]");
+            },
+        });
         quote! {
+            #[derive(Debug)]
             pub struct Params {
                 #decls
+            }
+
+            impl Params {
+                fn dump_scalar(s: &Scalar) {
+                    let bytes: &[u8] = &s.to_repr();
+                    print!("{:02x?}", bytes);
+                }
+
+                fn dump_point(p: &Point) {
+                    let bytes: &[u8] = &p.to_bytes();
+                    print!("{:02x?}", bytes);
+                }
+
+                pub fn dump(&self) {
+                    #(#dump_chunks)*
+                }
             }
         }
     };
@@ -209,6 +256,9 @@ fn sigma_compiler_impl(
     let prove_func = if emit_prover {
         quote! {
             pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
+                println!("prover params = {{");
+                params.dump();
+                println!("}}");
                 Ok(Vec::<u8>::default())
             }
         }
@@ -220,6 +270,9 @@ fn sigma_compiler_impl(
     let verify_func = if emit_verifier {
         quote! {
             pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
+                println!("verifier params = {{");
+                params.dump();
+                println!("}}");
                 Ok(())
             }
         }
@@ -231,6 +284,9 @@ fn sigma_compiler_impl(
     quote! {
         #[allow(non_snake_case)]
         pub mod #proto_name {
+            use ff::PrimeField;
+            use group::GroupEncoding;
+
             #group_types
             #params_def
             #witness_def
