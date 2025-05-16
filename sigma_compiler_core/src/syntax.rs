@@ -2,7 +2,7 @@ use quote::format_ident;
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{parenthesized, Expr, Ident, Token};
+use syn::{parenthesized, Error, Expr, Ident, Token};
 
 /// A `TaggedIdent` is an `Ident`, preceded by zero or more of the
 /// following tags: `pub`, `rand`, `cind`, `const`, `vec`
@@ -60,6 +60,10 @@ impl TaggedIdent {
                 }
                 "const" if point => {
                     is_const = true;
+                }
+                // any other use of the above keywords is not allowed
+                "pub" | "rand" | "cind" | "const" => {
+                    return Err(Error::new(id.span(), "tag not allowed in this position"));
                 }
                 // vec is allowed with either Scalars or Points, and
                 // with any other tag
