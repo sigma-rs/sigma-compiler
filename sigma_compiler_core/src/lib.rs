@@ -244,7 +244,7 @@ pub fn sigma_compiler_core(
             quote! {}
         };
         let mut assert_statements = spec.statements.clone();
-        let mut statement_fixup = StatementFixup::new(&spec);
+        let mut statement_fixup = StatementFixup::new(spec);
         assert_statements
             .iter_mut()
             .for_each(|expr| statement_fixup.visit_expr_mut(expr));
@@ -302,5 +302,4 @@ pub fn sigma_compiler_core(
             #verify_func
         }
     }
-    .into()
 }
