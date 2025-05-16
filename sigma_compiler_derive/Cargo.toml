@@ -7,11 +7,5 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-syn = { version = "2.0", features = ["extra-traits", "visit-mut", "full"] }
-quote = "1.0"
-
-[features]
-# Dump (to stdout) the public params on both the prover's and verifier's
-# side.  They should match.
-dump = []
-# default = ["dump"]
+sigma_compiler_core = { path = "../sigma_compiler_core" }
+syn = "2.0"
