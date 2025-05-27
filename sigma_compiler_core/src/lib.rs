@@ -7,7 +7,7 @@ use syn::{parse_quote, Expr, Ident, Token};
 mod syntax;
 
 pub use syntax::SigmaCompSpec;
-pub use syntax::TaggedIdent;
+pub use syntax::{TaggedPoint, TaggedScalar};
 
 // Names and types of fields that might end up in a generated struct
 enum StructField {
@@ -36,7 +36,7 @@ impl StructFieldList {
     pub fn push_vecpoint(&mut self, s: &Ident) {
         self.fields.push(StructField::VecPoint(s.clone()));
     }
-    pub fn push_scalars(&mut self, sl: &[TaggedIdent], is_pub: bool) {
+    pub fn push_scalars(&mut self, sl: &[TaggedScalar], is_pub: bool) {
         for tid in sl.iter() {
             if tid.is_pub == is_pub {
                 if tid.is_vec {
@@ -47,14 +47,12 @@ impl StructFieldList {
             }
         }
     }
-    pub fn push_points(&mut self, sl: &[TaggedIdent], is_pub: bool) {
+    pub fn push_points(&mut self, sl: &[TaggedPoint]) {
         for tid in sl.iter() {
-            if tid.is_pub == is_pub {
-                if tid.is_vec {
-                    self.push_vecpoint(&tid.id)
-                } else {
-                    self.push_point(&tid.id)
-                }
+            if tid.is_vec {
+                self.push_vecpoint(&tid.id)
+            } else {
+                self.push_point(&tid.id)
             }
         }
     }
@@ -98,9 +96,13 @@ impl StatementFixup {
         // "pub"), add to the map "id" -> params.id.  For each private
         // identifier (Scalars not marked "pub"), add to the map "id" ->
         // witness.id.
-        for tid in spec.scalars.iter().chain(spec.points.iter()) {
-            let id = &tid.id;
-            let idexpr: Expr = if tid.is_pub {
+        for (id, is_pub) in spec
+            .scalars
+            .iter()
+            .map(|ts| (&ts.id, ts.is_pub))
+            .chain(spec.points.iter().map(|tp| (&tp.id, true)))
+        {
+            let idexpr: Expr = if is_pub {
                 parse_quote! { params.#id }
             } else {
                 parse_quote! { witness.#id }
@@ -153,7 +155,7 @@ pub fn sigma_compiler_core(
     // Generate the public params struct definition
     let params_def = {
         let mut pub_params_fields = StructFieldList::default();
-        pub_params_fields.push_points(&spec.points, true);
+        pub_params_fields.push_points(&spec.points);
         pub_params_fields.push_scalars(&spec.scalars, true);
 
         let decls = pub_params_fields.field_decls();

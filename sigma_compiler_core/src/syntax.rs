@@ -4,18 +4,63 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::{parenthesized, Error, Expr, Ident, Token};
 
-/// A `TaggedIdent` is an `Ident`, preceded by zero or more of the
-/// following tags: `pub`, `rand`, `cind`, `const`, `vec`
+/// A `TaggedScalar` is an `Ident` representing a `Scalar`, preceded by
+/// zero or more of the following tags: `pub`, `rand`, `vec`
 ///
-/// A `TaggedIndent` representing a `Scalar` can be preceded by:
+/// The following combinations are valid:
 ///  - (nothing)
 ///  - `pub`
 ///  - `rand`
 ///  - `vec`
 ///  - `pub vec`
 ///  - `rand vec`
+
+#[derive(Debug)]
+pub struct TaggedScalar {
+    pub id: Ident,
+    pub is_pub: bool,
+    pub is_rand: bool,
+    pub is_vec: bool,
+}
+
+impl Parse for TaggedScalar {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let (mut is_pub, mut is_rand, mut is_vec) = (false, false, false);
+        loop {
+            let id = input.call(Ident::parse_any)?;
+            match id.to_string().as_str() {
+                // pub and rand are mutually exclusive
+                "pub" if !is_rand => {
+                    is_pub = true;
+                }
+                "rand" if !is_pub => {
+                    is_rand = true;
+                }
+                // any other use of the tagging keywords is not allowed
+                "pub" | "rand" | "cind" | "const" => {
+                    return Err(Error::new(id.span(), "tag not allowed in this position"));
+                }
+                // vec is allowed with any other tag
+                "vec" => {
+                    is_vec = true;
+                }
+                _ => {
+                    return Ok(TaggedScalar {
+                        id,
+                        is_pub,
+                        is_rand,
+                        is_vec,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// A `TaggedPoint` is an `Ident` representing a `Point`, preceded by
+/// zero or more of the following tags: `cind`, `const`, `vec`
 ///
-/// A `TaggedIndent` representing a `Point` can be preceded by:
+/// All combinations are valid:
 ///  - (nothing)
 ///  - `cind`
 ///  - `const`
@@ -26,55 +71,36 @@ use syn::{parenthesized, Error, Expr, Ident, Token};
 ///  - `cind const vec`
 
 #[derive(Debug)]
-pub struct TaggedIdent {
+pub struct TaggedPoint {
     pub id: Ident,
-    pub is_pub: bool,
-    pub is_rand: bool,
     pub is_cind: bool,
     pub is_const: bool,
     pub is_vec: bool,
 }
 
-impl TaggedIdent {
-    // parse for a `Scalar` if point is false; parse for a `Point` if point
-    // is true
-    pub fn parse(input: ParseStream, point: bool) -> Result<Self> {
+impl Parse for TaggedPoint {
+    fn parse(input: ParseStream) -> Result<Self> {
         // Points are always pub
-        let (mut is_pub, mut is_rand, mut is_cind, mut is_const, mut is_vec) =
-            (point, false, false, false, false);
+        let (mut is_cind, mut is_const, mut is_vec) = (false, false, false);
         loop {
             let id = input.call(Ident::parse_any)?;
             match id.to_string().as_str() {
-                // pub and rand are only allowed for Scalars, and are
-                // mutually exclusive
-                "pub" if !point && !is_rand => {
-                    is_pub = true;
-                }
-                "rand" if !point && !is_pub => {
-                    is_rand = true;
-                }
-                // cind and const are only allowed for Points, but can
-                // be used together
-                "cind" if point => {
+                "cind" => {
                     is_cind = true;
                 }
-                "const" if point => {
+                "const" => {
                     is_const = true;
                 }
-                // any other use of the above keywords is not allowed
-                "pub" | "rand" | "cind" | "const" => {
+                // any other use of the tagging keywords is not allowed
+                "pub" | "rand" => {
                     return Err(Error::new(id.span(), "tag not allowed in this position"));
                 }
-                // vec is allowed with either Scalars or Points, and
-                // with any other tag
                 "vec" => {
                     is_vec = true;
                 }
                 _ => {
-                    return Ok(TaggedIdent {
+                    return Ok(TaggedPoint {
                         id,
-                        is_pub,
-                        is_rand,
                         is_cind,
                         is_const,
                         is_vec,
@@ -83,40 +109,22 @@ impl TaggedIdent {
             }
         }
     }
-
-    // Parse a `TaggedIndent` using the tags allowed for a `Scalar`
-    pub fn parse_scalar(input: ParseStream) -> Result<Self> {
-        Self::parse(input, false)
-    }
-
-    // Parse a `TaggedIndent` using the tags allowed for a `Point`
-    pub fn parse_point(input: ParseStream) -> Result<Self> {
-        Self::parse(input, true)
-    }
 }
 
 #[derive(Debug)]
 pub struct SigmaCompSpec {
     pub proto_name: Ident,
     pub group_name: Ident,
-    pub scalars: Vec<TaggedIdent>,
-    pub points: Vec<TaggedIdent>,
+    pub scalars: Vec<TaggedScalar>,
+    pub points: Vec<TaggedPoint>,
     pub statements: Vec<Expr>,
 }
 
-// parse for a `Scalar` if point is false; parse for a `Point` if point
-// is true
-fn paren_taggedidents(input: ParseStream, point: bool) -> Result<Vec<TaggedIdent>> {
+// T is TaggedScalar or TaggedPoint
+fn paren_taggedidents<T: Parse>(input: ParseStream) -> Result<Vec<T>> {
     let content;
     parenthesized!(content in input);
-    let punc: Punctuated<TaggedIdent, Token![,]> = content.parse_terminated(
-        if point {
-            TaggedIdent::parse_point
-        } else {
-            TaggedIdent::parse_scalar
-        },
-        Token![,],
-    )?;
+    let punc: Punctuated<T, Token![,]> = content.parse_terminated(T::parse, Token![,])?;
     Ok(punc.into_iter().collect())
 }
 
@@ -134,10 +142,10 @@ impl Parse for SigmaCompSpec {
         };
         input.parse::<Token![,]>()?;
 
-        let scalars = paren_taggedidents(input, false)?;
+        let scalars = paren_taggedidents::<TaggedScalar>(input)?;
         input.parse::<Token![,]>()?;
 
-        let points = paren_taggedidents(input, true)?;
+        let points = paren_taggedidents::<TaggedPoint>(input)?;
         input.parse::<Token![,]>()?;
 
         let statementpunc: Punctuated<Expr, Token![,]> =
