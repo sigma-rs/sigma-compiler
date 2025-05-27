@@ -6,8 +6,7 @@ use syn::{parse_quote, Expr, Ident, Token};
 
 mod syntax;
 
-pub use syntax::SigmaCompSpec;
-pub use syntax::{TaggedPoint, TaggedScalar};
+pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, VarDict};
 
 // Names and types of fields that might end up in a generated struct
 enum StructField {
@@ -36,23 +35,27 @@ impl StructFieldList {
     pub fn push_vecpoint(&mut self, s: &Ident) {
         self.fields.push(StructField::VecPoint(s.clone()));
     }
-    pub fn push_scalars(&mut self, sl: &[TaggedScalar], is_pub: bool) {
-        for tid in sl.iter() {
-            if tid.is_pub == is_pub {
-                if tid.is_vec {
-                    self.push_vecscalar(&tid.id)
-                } else {
-                    self.push_scalar(&tid.id)
+    pub fn push_vars(&mut self, vardict: &VarDict, is_pub: bool) {
+        for (_, ti) in vardict.iter() {
+            match ti {
+                TaggedIdent::Scalar(st) => {
+                    if st.is_pub == is_pub {
+                        if st.is_vec {
+                            self.push_vecscalar(&st.id)
+                        } else {
+                            self.push_scalar(&st.id)
+                        }
+                    }
                 }
-            }
-        }
-    }
-    pub fn push_points(&mut self, sl: &[TaggedPoint]) {
-        for tid in sl.iter() {
-            if tid.is_vec {
-                self.push_vecpoint(&tid.id)
-            } else {
-                self.push_point(&tid.id)
+                TaggedIdent::Point(pt) => {
+                    if is_pub {
+                        if pt.is_vec {
+                            self.push_vecpoint(&pt.id)
+                        } else {
+                            self.push_point(&pt.id)
+                        }
+                    }
+                }
             }
         }
     }
@@ -96,12 +99,10 @@ impl StatementFixup {
         // "pub"), add to the map "id" -> params.id.  For each private
         // identifier (Scalars not marked "pub"), add to the map "id" ->
         // witness.id.
-        for (id, is_pub) in spec
-            .scalars
-            .iter()
-            .map(|ts| (&ts.id, ts.is_pub))
-            .chain(spec.points.iter().map(|tp| (&tp.id, true)))
-        {
+        for (id, is_pub) in spec.vars.values().map(|ti| match ti {
+            TaggedIdent::Scalar(st) => (&st.id, st.is_pub),
+            TaggedIdent::Point(pt) => (&pt.id, true),
+        }) {
             let idexpr: Expr = if is_pub {
                 parse_quote! { params.#id }
             } else {
@@ -155,8 +156,7 @@ pub fn sigma_compiler_core(
     // Generate the public params struct definition
     let params_def = {
         let mut pub_params_fields = StructFieldList::default();
-        pub_params_fields.push_points(&spec.points);
-        pub_params_fields.push_scalars(&spec.scalars, true);
+        pub_params_fields.push_vars(&spec.vars, true);
 
         let decls = pub_params_fields.field_decls();
         let dump_impl = if cfg!(feature = "dump") {
@@ -222,7 +222,7 @@ pub fn sigma_compiler_core(
     // Generate the witness struct definition
     let witness_def = if emit_prover {
         let mut witness_fields = StructFieldList::default();
-        witness_fields.push_scalars(&spec.scalars, false);
+        witness_fields.push_vars(&spec.vars, false);
 
         let decls = witness_fields.field_decls();
         quote! {

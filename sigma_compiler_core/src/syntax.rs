@@ -1,4 +1,5 @@
 use quote::format_ident;
+use std::collections::HashMap;
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
@@ -78,6 +79,18 @@ pub struct TaggedPoint {
     pub is_vec: bool,
 }
 
+/// A `TaggedIdent` can be either a `TaggedScalar` or a `TaggedPoint`
+#[derive(Debug)]
+pub enum TaggedIdent {
+    Scalar(TaggedScalar),
+    Point(TaggedPoint),
+}
+
+/// A `VarDict` is a dictionary of the available variables, mapping
+/// the string version of `Ident`s to `TaggedIdent`, which includes
+/// their type (`Scalar` or `Point`)
+pub type VarDict = HashMap<String, TaggedIdent>;
+
 impl Parse for TaggedPoint {
     fn parse(input: ParseStream) -> Result<Self> {
         // Points are always pub
@@ -115,8 +128,7 @@ impl Parse for TaggedPoint {
 pub struct SigmaCompSpec {
     pub proto_name: Ident,
     pub group_name: Ident,
-    pub scalars: Vec<TaggedScalar>,
-    pub points: Vec<TaggedPoint>,
+    pub vars: VarDict,
     pub statements: Vec<Expr>,
 }
 
@@ -142,10 +154,22 @@ impl Parse for SigmaCompSpec {
         };
         input.parse::<Token![,]>()?;
 
+        let mut vars: VarDict = HashMap::new();
+
         let scalars = paren_taggedidents::<TaggedScalar>(input)?;
+        vars.extend(
+            scalars
+                .into_iter()
+                .map(|ts| (ts.id.to_string(), TaggedIdent::Scalar(ts))),
+        );
         input.parse::<Token![,]>()?;
 
         let points = paren_taggedidents::<TaggedPoint>(input)?;
+        vars.extend(
+            points
+                .into_iter()
+                .map(|tp| (tp.id.to_string(), TaggedIdent::Point(tp))),
+        );
         input.parse::<Token![,]>()?;
 
         let statementpunc: Punctuated<Expr, Token![,]> =
@@ -155,8 +179,7 @@ impl Parse for SigmaCompSpec {
         Ok(SigmaCompSpec {
             proto_name,
             group_name,
-            scalars,
-            points,
+            vars,
             statements,
         })
     }
