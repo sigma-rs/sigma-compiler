@@ -1,3 +1,4 @@
+use super::combiners::StatementTree;
 use quote::format_ident;
 use std::collections::HashMap;
 use syn::ext::IdentExt;
@@ -129,7 +130,7 @@ pub struct SigmaCompSpec {
     pub proto_name: Ident,
     pub group_name: Ident,
     pub vars: VarDict,
-    pub statements: Vec<Expr>,
+    pub statements: StatementTree,
 }
 
 // T is TaggedScalar or TaggedPoint
@@ -174,7 +175,8 @@ impl Parse for SigmaCompSpec {
 
         let statementpunc: Punctuated<Expr, Token![,]> =
             input.parse_terminated(Expr::parse, Token![,])?;
-        let statements: Vec<Expr> = statementpunc.into_iter().collect();
+        let statementlist: Vec<Expr> = statementpunc.into_iter().collect();
+        let statements = StatementTree::parse_andlist(&statementlist)?;
 
         Ok(SigmaCompSpec {
             proto_name,

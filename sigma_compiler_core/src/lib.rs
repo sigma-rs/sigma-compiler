@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use syn::visit_mut::{self, VisitMut};
 use syn::{parse_quote, Expr, Ident, Token};
 
+mod combiners;
 mod syntax;
 
 pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, VarDict};
@@ -245,11 +246,14 @@ pub fn sigma_compiler_core(
         } else {
             quote! {}
         };
-        let mut assert_statements = spec.statements.clone();
+        let mut assert_statementtree = spec.statements.clone();
         let mut statement_fixup = StatementFixup::new(spec);
-        assert_statements
-            .iter_mut()
+        assert_statementtree
+            .leaves_mut()
+            .into_iter()
             .for_each(|expr| statement_fixup.visit_expr_mut(expr));
+        let assert_statements = assert_statementtree.leaves_mut();
+
         quote! {
             pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
                 #dumper
