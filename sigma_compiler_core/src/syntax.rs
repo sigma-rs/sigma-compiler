@@ -1,4 +1,5 @@
 use super::sigma::combiners::StatementTree;
+use super::sigma::types::*;
 use quote::format_ident;
 use std::collections::HashMap;
 use syn::ext::IdentExt;
@@ -87,10 +88,35 @@ pub enum TaggedIdent {
     Point(TaggedPoint),
 }
 
-/// A `VarDict` is a dictionary of the available variables, mapping
-/// the string version of `Ident`s to `TaggedIdent`, which includes
-/// their type (`Scalar` or `Point`)
-pub type VarDict = HashMap<String, TaggedIdent>;
+/// Convert a [`TaggedIdent`] to its underlying [`AExprType`]
+impl From<&TaggedIdent> for AExprType {
+    fn from(ti: &TaggedIdent) -> Self {
+        match ti {
+            TaggedIdent::Scalar(ts) => Self::Scalar {
+                is_pub: ts.is_pub,
+                is_vec: ts.is_vec,
+            },
+            TaggedIdent::Point(tp) => Self::Point {
+                is_pub: true,
+                is_vec: tp.is_vec,
+            },
+        }
+    }
+}
+
+/// A `TaggedVarDict` is a dictionary of the available variables,
+/// mapping the string version of `Ident`s to `TaggedIdent`, which
+/// includes their type (`Scalar` or `Point`)
+pub type TaggedVarDict = HashMap<String, TaggedIdent>;
+
+/// Convert a [`TaggedVarDict`] (a map from [`String`] to
+/// [`TaggedIdent`]) into the equivalent [`VarDict`] (a map from
+/// [`String`] to [`AExprType`])
+pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
+    vd.iter()
+        .map(|(k, v)| (k.clone(), AExprType::from(v)))
+        .collect()
+}
 
 impl Parse for TaggedPoint {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -129,7 +155,7 @@ impl Parse for TaggedPoint {
 pub struct SigmaCompSpec {
     pub proto_name: Ident,
     pub group_name: Ident,
-    pub vars: VarDict,
+    pub vars: TaggedVarDict,
     pub statements: StatementTree,
 }
 
@@ -155,7 +181,7 @@ impl Parse for SigmaCompSpec {
         };
         input.parse::<Token![,]>()?;
 
-        let mut vars: VarDict = HashMap::new();
+        let mut vars: TaggedVarDict = HashMap::new();
 
         let scalars = paren_taggedidents::<TaggedScalar>(input)?;
         vars.extend(

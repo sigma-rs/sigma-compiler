@@ -9,10 +9,11 @@ use syn::{parse_quote, Expr, Ident, Token};
 /// module
 mod sigma {
     pub mod combiners;
+    pub mod types;
 }
 mod syntax;
 
-pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, VarDict};
+pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, TaggedVarDict};
 
 // Names and types of fields that might end up in a generated struct
 enum StructField {
@@ -41,7 +42,7 @@ impl StructFieldList {
     pub fn push_vecpoint(&mut self, s: &Ident) {
         self.fields.push(StructField::VecPoint(s.clone()));
     }
-    pub fn push_vars(&mut self, vardict: &VarDict, is_pub: bool) {
+    pub fn push_vars(&mut self, vardict: &TaggedVarDict, is_pub: bool) {
         for (_, ti) in vardict.iter() {
             match ti {
                 TaggedIdent::Scalar(st) => {
