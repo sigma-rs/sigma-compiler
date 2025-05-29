@@ -1,4 +1,4 @@
-use super::combiners::StatementTree;
+use super::sigma::combiners::StatementTree;
 use quote::format_ident;
 use std::collections::HashMap;
 use syn::ext::IdentExt;

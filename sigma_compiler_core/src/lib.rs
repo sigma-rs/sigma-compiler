@@ -4,7 +4,12 @@ use std::collections::HashMap;
 use syn::visit_mut::{self, VisitMut};
 use syn::{parse_quote, Expr, Ident, Token};
 
-mod combiners;
+/// The submodules that would be useful to have in the lower-level
+/// `sigma` crate are for now included as submodules of a local `sigma`
+/// module
+mod sigma {
+    pub mod combiners;
+}
 mod syntax;
 
 pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, VarDict};
