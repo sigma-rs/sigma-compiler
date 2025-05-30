@@ -1,3 +1,5 @@
+//! A module for parsing the syntax of the macro
+
 use super::sigma::combiners::StatementTree;
 use super::sigma::types::*;
 use quote::format_ident;
@@ -7,8 +9,8 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::{parenthesized, Error, Expr, Ident, Token};
 
-/// A `TaggedScalar` is an `Ident` representing a `Scalar`, preceded by
-/// zero or more of the following tags: `pub`, `rand`, `vec`
+/// A [`TaggedScalar`] is an [`struct@Ident`] representing a `Scalar`,
+/// preceded by zero or more of the following tags: `pub`, `rand`, `vec`
 ///
 /// The following combinations are valid:
 ///  - (nothing)
@@ -60,8 +62,9 @@ impl Parse for TaggedScalar {
     }
 }
 
-/// A `TaggedPoint` is an `Ident` representing a `Point`, preceded by
-/// zero or more of the following tags: `cind`, `const`, `vec`
+/// A [`TaggedPoint`] is an [`struct@Ident`] representing a `Point`,
+/// preceded by zero or more of the following tags: `cind`, `const`,
+/// `vec`
 ///
 /// All combinations are valid:
 ///  - (nothing)
@@ -81,7 +84,8 @@ pub struct TaggedPoint {
     pub is_vec: bool,
 }
 
-/// A `TaggedIdent` can be either a `TaggedScalar` or a `TaggedPoint`
+/// A [`TaggedIdent`] can be either a [`TaggedScalar`] or a
+/// [`TaggedPoint`]
 #[derive(Debug)]
 pub enum TaggedIdent {
     Scalar(TaggedScalar),
@@ -104,9 +108,10 @@ impl From<&TaggedIdent> for AExprType {
     }
 }
 
-/// A `TaggedVarDict` is a dictionary of the available variables,
-/// mapping the string version of `Ident`s to `TaggedIdent`, which
-/// includes their type (`Scalar` or `Point`)
+/// A [`TaggedVarDict`] is a dictionary of the available variables,
+/// mapping the string version of [`struct@Ident`]s to [`TaggedIdent`],
+/// which includes their type ([`Scalar`](TaggedIdent::Scalar) or
+/// [`Point`](TaggedIdent::Point))
 pub type TaggedVarDict = HashMap<String, TaggedIdent>;
 
 /// Convert a [`TaggedVarDict`] (a map from [`String`] to
