@@ -226,6 +226,8 @@ impl Parse for SigmaCompSpec {
             input.parse_terminated(Expr::parse, Token![,])?;
         let statementlist: Vec<Expr> = statementpunc.into_iter().collect();
         let statements = StatementTree::parse_andlist(&statementlist)?;
+        let vardict = taggedvardict_to_vardict(&vars);
+        statements.check_disjunction_invariant(&vardict)?;
 
         Ok(SigmaCompSpec {
             proto_name,
