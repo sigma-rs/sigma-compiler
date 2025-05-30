@@ -28,7 +28,7 @@ pub enum AExprType {
 }
 
 impl From<&str> for AExprType {
-    /// A convenience function for creating a [`AExprType`] from a
+    /// A convenience function for creating an [`AExprType`] from a
     /// [`&str`].  Pass one of (or their short forms):
     ///   - `"Scalar"` (`"S"`)
     ///   - `"pub Scalar"` (`"pS"`)
