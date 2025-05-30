@@ -7,7 +7,7 @@ use syn::{parse_quote, Expr, Ident, Token};
 /// The submodules that would be useful to have in the lower-level
 /// `sigma` crate are for now included as submodules of a local `sigma`
 /// module
-mod sigma {
+pub mod sigma {
     pub mod combiners;
     pub mod types;
 }
@@ -89,8 +89,9 @@ impl StructFieldList {
 
 /// An implementation of the
 /// [`VisitMut`](https://docs.rs/syn/latest/syn/visit_mut/trait.VisitMut.html)
-/// trait that massages the provided statements.  This massaging
-/// currently consists of:
+/// trait that massages the provided statements.
+///
+/// This massaging currently consists of:
 ///   - Changing equality from = to ==
 ///   - Changing any identifier `id` to either `params.id` or
 ///     `witness.id` depending on whether it is public or private
@@ -147,6 +148,17 @@ impl VisitMut for StatementFixup {
     }
 }
 
+/// The main function of this macro.
+///
+/// Parse the macro input with [`parse`](SigmaCompSpec) to produce
+/// a [`SigmaCompSpec`], and then pass that to this function to output
+/// the data structures and code for the ZKP protocol implementation.
+///
+/// If `emit_prover` is `true`, output the data structures and code for
+/// the prover side.  If `emit_verifier` is `true`, output the data
+/// structures and code for the verifier side.  (Typically both will be
+/// `true`, but you can set one to `false` if you don't need that side
+/// of the protocol.)
 pub fn sigma_compiler_core(
     spec: &SigmaCompSpec,
     emit_prover: bool,

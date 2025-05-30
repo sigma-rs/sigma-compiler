@@ -156,11 +156,29 @@ impl Parse for TaggedPoint {
     }
 }
 
+/// The [`SigmaCompSpec`] struct is the result of parsing the macro
+/// input.
 #[derive(Debug)]
 pub struct SigmaCompSpec {
+    /// An identifier for the name of the zero-knowledge protocol being
+    /// defined
     pub proto_name: Ident,
+
+    /// An identifier for the mathematical
+    /// [`PrimeGroup`](https://docs.rs/group/latest/group/prime/trait.PrimeGroup.html)
+    /// being used (if none is specified, it is assumed there is a
+    /// default type called `G` in scope that implements the
+    /// [`PrimeGroup`](https://docs.rs/group/latest/group/prime/trait.PrimeGroup.html)
+    /// trait)
     pub group_name: Ident,
+
+    /// A [`TaggedVarDict`] mapping variable names to their types
+    /// (`Scalar` or `Point`) and tags (e.g., `rand`, `pub`, `vec`,
+    /// `cind`, `const`)
     pub vars: TaggedVarDict,
+
+    /// A [`StatementTree`] representing the statements provided in the
+    /// macro invocation that are to be proved true in zero knowledge
     pub statements: StatementTree,
 }
 
