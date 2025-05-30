@@ -13,6 +13,14 @@ use syn::parse::Result;
 use syn::spanned::Spanned;
 use syn::{Error, Expr};
 
+/// The possible types of an arithmetic expression over `Scalar`s and
+/// `Point`s.  Each expression has type either
+/// [`Scalar`](AExprType::Scalar) or [`Point`](AExprType::Point), and
+/// can be public (`is_pub == true`) or private (`is_pub == false`), and
+/// be either a vector (`is_vec == true`) or not (`is_vec == false`).
+/// Note that while an individual variable cannot be a private `Point`,
+/// it is common to construct an arithmetic expression of that type, for
+/// example by multiplying a private `Scalar` by a public `Point`.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AExprType {
     Scalar { is_pub: bool, is_vec: bool },

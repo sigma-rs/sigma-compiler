@@ -1,3 +1,6 @@
+//! This module creates and manipulates trees of basic statements
+//! combined with `AND`, `OR`, and `THRESH`.
+
 use syn::parse::Result;
 use syn::Expr;
 
@@ -19,6 +22,38 @@ pub enum StatementTree {
 }
 
 impl StatementTree {
+    /// Parse an [`Expr`] (which may contain nested `AND`, `OR`, or
+    /// `THRESH`) into a [`StatementTree`].  For example, the
+    /// [`Expr`] obtained from:
+    /// ```
+    /// parse_quote! {
+    ///    AND(
+    ///        C = c*B + r*A,
+    ///        D = d*B + s*A,
+    ///        OR (
+    ///            AND (
+    ///                C = c0*B + r0*A,
+    ///                D = d0*B + s0*A,
+    ///                c0 = d0,
+    ///            ),
+    ///            AND (
+    ///                C = c1*B + r1*A,
+    ///                D = d1*B + s1*A,
+    ///                c1 = d1 + 1,
+    ///            ),
+    ///        )
+    ///    )
+    /// }
+    /// ```
+    ///
+    /// would yield a [`StatementTree::And`] containing a 3-element
+    /// vector.  The first two elements are [`StatementTree::Leaf`], and
+    /// the third is [`StatementTree::Or`] containing a 2-element
+    /// vector.  Each element is an [`StatementTree::And`] with a vector
+    /// containing 3 [`StatementTree::Leaf`]s.
+    ///
+    /// Note that `AND`, `OR`, and `THRESH` in the expression are
+    /// case-insensitive.
     pub fn parse(expr: &Expr) -> Result<Self> {
         // See if the expression describes a combiner
         if let Expr::Call(syn::ExprCall { func, args, .. }) = expr {
@@ -65,11 +100,18 @@ impl StatementTree {
         Ok(StatementTree::Leaf(expr.clone()))
     }
 
+    /// A convenience function that takes a list of [`Expr`]s, and
+    /// returns the [`StatementTree`] that implicitly puts `AND` around
+    /// the [`Expr`]s.  This is useful because a common thing to do is
+    /// to just write a list of [`Expr`]s in the top-level macro
+    /// invocation, having the semantics of "all of these must be true".
     pub fn parse_andlist(exprlist: &[Expr]) -> Result<Self> {
         let children: Result<Vec<StatementTree>> = exprlist.iter().map(Self::parse).collect();
         Ok(StatementTree::And(children?))
     }
 
+    /// Return a vector of mutable references to all of the leaves in
+    /// the [`StatementTree`]
     pub fn leaves_mut(&mut self) -> Vec<&mut Expr> {
         match self {
             StatementTree::Leaf(ref mut e) => vec![e],
