@@ -83,9 +83,11 @@ impl From<&str> for AExprType {
 /// to their [`AExprType`]
 pub type VarDict = HashMap<String, AExprType>;
 
-/// Pass a slice of pairs of strings.  The first element of each
-/// pair is the variable name; the second is the [`AExprType`], as
-/// listed in the [`AExprType::from`] function
+/// Create a [`VarDict`] from a slice of pairs of strings.
+///
+/// The first element of each pair is the variable name; the second
+/// represents the [`AExprType`], as listed in the [`AExprType::from`]
+/// function
 pub fn vardict_from_strs(strs: &[(&str, &str)]) -> VarDict {
     let c = strs
         .iter()
@@ -95,8 +97,9 @@ pub fn vardict_from_strs(strs: &[(&str, &str)]) -> VarDict {
 
 /// Given a [`VarDict`] and an [`Expr`] representing an arithmetic
 /// expression using the variables in the [`VarDict`], compute the
-/// [`AExprType`] of the expression.  An arithmetic expression can consist
-/// of:
+/// [`AExprType`] of the expression.
+///
+/// An arithmetic expression can consist of:
 ///   - variables that are in the [`VarDict`]
 ///   - integer constants
 ///   - the operations `*`, `+`, `-` (binary or unary)
