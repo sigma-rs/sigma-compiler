@@ -150,9 +150,10 @@ impl VisitMut for StatementFixup {
 
 /// The main function of this macro.
 ///
-/// Parse the macro input with [`parse`](SigmaCompSpec) to produce
-/// a [`SigmaCompSpec`], and then pass that to this function to output
-/// the data structures and code for the ZKP protocol implementation.
+/// Parse the macro input with [`parse`](SigmaCompSpec#method.parse) to
+/// produce a [`SigmaCompSpec`], and then pass that to this function to
+/// output the data structures and code for the ZKP protocol
+/// implementation.
 ///
 /// If `emit_prover` is `true`, output the data structures and code for
 /// the prover side.  If `emit_verifier` is `true`, output the data
