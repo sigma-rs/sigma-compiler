@@ -270,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expr_type() {
+    fn expr_type_test() {
         let vars: VarDict = vardict_from_strs(&[("a", "S"), ("A", "pP"), ("v", "vS")]);
         check(&vars, parse_quote! {2}, "pS");
         check(&vars, parse_quote! {-4}, "pS");
