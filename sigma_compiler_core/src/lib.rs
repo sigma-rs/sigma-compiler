@@ -12,6 +12,7 @@ pub mod sigma {
     pub mod types;
 }
 mod syntax;
+mod transform;
 
 pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, TaggedVarDict};
 
