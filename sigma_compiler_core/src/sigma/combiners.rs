@@ -57,7 +57,7 @@ impl<'a> Visit<'a> for PrivScalarMap<'a> {
 /// one of its children is true.  A `Thresh` node (with threshold `k`) is
 /// true if at least `k` of its children are true.
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StatementTree {
     Leaf(Expr),
     And(Vec<StatementTree>),
