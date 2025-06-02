@@ -21,7 +21,7 @@ use syn::{Error, Expr};
 /// Note that while an individual variable cannot be a private `Point`,
 /// it is common to construct an arithmetic expression of that type, for
 /// example by multiplying a private `Scalar` by a public `Point`.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum AExprType {
     Scalar { is_pub: bool, is_vec: bool },
     Point { is_pub: bool, is_vec: bool },
