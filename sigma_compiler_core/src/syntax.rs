@@ -84,6 +84,39 @@ pub struct TaggedPoint {
     pub is_vec: bool,
 }
 
+impl Parse for TaggedPoint {
+    fn parse(input: ParseStream) -> Result<Self> {
+        // Points are always pub
+        let (mut is_cind, mut is_const, mut is_vec) = (false, false, false);
+        loop {
+            let id = input.call(Ident::parse_any)?;
+            match id.to_string().as_str() {
+                "cind" => {
+                    is_cind = true;
+                }
+                "const" => {
+                    is_const = true;
+                }
+                // any other use of the tagging keywords is not allowed
+                "pub" | "rand" => {
+                    return Err(Error::new(id.span(), "tag not allowed in this position"));
+                }
+                "vec" => {
+                    is_vec = true;
+                }
+                _ => {
+                    return Ok(TaggedPoint {
+                        id,
+                        is_cind,
+                        is_const,
+                        is_vec,
+                    });
+                }
+            }
+        }
+    }
+}
+
 /// A [`TaggedIdent`] can be either a [`TaggedScalar`] or a
 /// [`TaggedPoint`]
 #[derive(Debug)]
@@ -121,39 +154,6 @@ pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
     vd.iter()
         .map(|(k, v)| (k.clone(), AExprType::from(v)))
         .collect()
-}
-
-impl Parse for TaggedPoint {
-    fn parse(input: ParseStream) -> Result<Self> {
-        // Points are always pub
-        let (mut is_cind, mut is_const, mut is_vec) = (false, false, false);
-        loop {
-            let id = input.call(Ident::parse_any)?;
-            match id.to_string().as_str() {
-                "cind" => {
-                    is_cind = true;
-                }
-                "const" => {
-                    is_const = true;
-                }
-                // any other use of the tagging keywords is not allowed
-                "pub" | "rand" => {
-                    return Err(Error::new(id.span(), "tag not allowed in this position"));
-                }
-                "vec" => {
-                    is_vec = true;
-                }
-                _ => {
-                    return Ok(TaggedPoint {
-                        id,
-                        is_cind,
-                        is_const,
-                        is_vec,
-                    });
-                }
-            }
-        }
-    }
 }
 
 /// The [`SigmaCompSpec`] struct is the result of parsing the macro
