@@ -20,7 +20,7 @@ use syn::{parenthesized, Error, Expr, Ident, Token};
 ///  - `pub vec`
 ///  - `rand vec`
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TaggedScalar {
     pub id: Ident,
     pub is_pub: bool,
@@ -76,7 +76,7 @@ impl Parse for TaggedScalar {
 ///  - `const vec`
 ///  - `cind const vec`
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TaggedPoint {
     pub id: Ident,
     pub is_cind: bool,
@@ -119,7 +119,7 @@ impl Parse for TaggedPoint {
 
 /// A [`TaggedIdent`] can be either a [`TaggedScalar`] or a
 /// [`TaggedPoint`]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TaggedIdent {
     Scalar(TaggedScalar),
     Point(TaggedPoint),
