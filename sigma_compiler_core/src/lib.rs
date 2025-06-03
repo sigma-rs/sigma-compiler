@@ -162,12 +162,15 @@ impl VisitMut for StatementFixup {
 /// `true`, but you can set one to `false` if you don't need that side
 /// of the protocol.)
 pub fn sigma_compiler_core(
-    spec: &SigmaCompSpec,
+    spec: &mut SigmaCompSpec,
     emit_prover: bool,
     emit_verifier: bool,
 ) -> TokenStream {
     let proto_name = &spec.proto_name;
     let group_name = &spec.group_name;
+
+    // Apply any substitution transformations
+    transform::apply_substitutions(&mut spec.statements, &mut spec.vars).unwrap();
 
     let group_types = quote! {
         pub type Scalar = <super::#group_name as super::Group>::Scalar;
