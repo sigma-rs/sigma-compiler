@@ -10,7 +10,7 @@ use syn::Expr;
 /// For each [`Ident`](struct@syn::Ident) representing a private
 /// `Scalar` (as listed in a [`VarDict`]) that appears in an [`Expr`],
 /// call a given closure.
-struct PrivScalarMap<'a> {
+pub struct PrivScalarMap<'a> {
     /// The [`VarDict`] that maps variable names to their types
     pub vars: &'a VarDict,
 
