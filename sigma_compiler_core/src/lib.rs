@@ -169,6 +169,12 @@ pub fn sigma_compiler_core(
     let proto_name = &spec.proto_name;
     let group_name = &spec.group_name;
 
+    // Save a copy of the input TaggedVarDict, because the Params and
+    // Witness structs will be built from that TaggedVarDict, not the
+    // one modified by apply_substitutions below.
+
+    let input_vars = spec.vars.clone();
+
     // Apply any substitution transformations
     transform::apply_substitutions(&mut spec.statements, &mut spec.vars).unwrap();
 
@@ -180,7 +186,7 @@ pub fn sigma_compiler_core(
     // Generate the public params struct definition
     let params_def = {
         let mut pub_params_fields = StructFieldList::default();
-        pub_params_fields.push_vars(&spec.vars, true);
+        pub_params_fields.push_vars(&input_vars, true);
 
         let decls = pub_params_fields.field_decls();
         let dump_impl = if cfg!(feature = "dump") {
@@ -246,7 +252,7 @@ pub fn sigma_compiler_core(
     // Generate the witness struct definition
     let witness_def = if emit_prover {
         let mut witness_fields = StructFieldList::default();
-        witness_fields.push_vars(&spec.vars, false);
+        witness_fields.push_vars(&input_vars, false);
 
         let decls = witness_fields.field_decls();
         quote! {
