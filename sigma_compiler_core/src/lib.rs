@@ -33,7 +33,7 @@ pub fn sigma_compiler_core(
     let mut codegen = codegen::CodeGen::new(spec);
 
     // Apply any substitution transformations
-    transform::apply_substitutions(&mut spec.statements, &mut spec.vars).unwrap();
+    transform::apply_substitutions(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
 
     codegen.generate(spec, emit_prover, emit_verifier)
 }

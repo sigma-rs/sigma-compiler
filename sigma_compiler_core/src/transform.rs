@@ -3,9 +3,11 @@
 //!
 //! [disjunction invariant]: StatementTree::check_disjunction_invariant
 
+use super::codegen::CodeGen;
 use super::sigma::combiners::*;
 use super::syntax::taggedvardict_to_vardict;
 use super::{TaggedIdent, TaggedScalar, TaggedVarDict};
+use quote::quote;
 use std::collections::{HashSet, VecDeque};
 use syn::visit::Visit;
 use syn::visit_mut::{self, VisitMut};
@@ -200,7 +202,10 @@ fn do_substitution<'a>(expr: &mut Expr, idstr: &'a str, replacement: &'a Expr) {
 /// from the [`TaggedVarDict`].  The leaves of the [`StatementTree`]
 /// containing the substitution statements themselves will be turned
 /// into the constant `true` and then pruned using
-/// [`prune_statement_tree`].
+/// [`prune_statement_tree`].  The [`CodeGen`] will be used to generate
+/// tests in the generated `prove` function that the `Params` and
+/// `Witness` supplied to it do in fact satisfy the statements being
+/// substituted.
 ///
 /// It is the case that if the [disjunction invariant] is satisfied
 /// before this function is called (and the caller must ensure that it
@@ -209,7 +214,11 @@ fn do_substitution<'a>(expr: &mut Expr, idstr: &'a str, replacement: &'a Expr) {
 ///
 /// [arithmetic expression]: super::sigma::types::expr_type
 /// [disjunction invariant]: StatementTree::check_disjunction_invariant
-pub fn apply_substitutions(st: &mut StatementTree, vars: &mut TaggedVarDict) -> Result<()> {
+pub fn apply_substitutions(
+    codegen: &mut CodeGen,
+    st: &mut StatementTree,
+    vars: &mut TaggedVarDict,
+) -> Result<()> {
     // Gather mutable references to all Exprs in the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
     // the StatementTree, but that's fine.
@@ -235,8 +244,9 @@ pub fn apply_substitutions(st: &mut StatementTree, vars: &mut TaggedVarDict) -> 
         }
         if let Some(id) = is_subs {
             // If this leaf is a substitution of a private Scalar, add
-            // it to subs and replace it in the StatementTree with the
-            // constant true.
+            // it to subs, replace it in the StatementTree with the
+            // constant true, and generate some code for `prove` to
+            // check the statement.
             let mut expr: Expr = parse_quote! { true };
             std::mem::swap(&mut expr, *leafexpr);
             // This "if let" is guaranteed to succeed
@@ -246,6 +256,9 @@ pub fn apply_substitutions(st: &mut StatementTree, vars: &mut TaggedVarDict) -> 
                     return Err(Error::new(id.span(), "variable substituted multiple times"));
                 }
                 let right = paren_if_needed(*right);
+                codegen.prove_append(quote! {
+                    assert!(#id == #right);
+                });
                 subs.push_back((id, right, used_priv_scalars));
             }
         }
@@ -438,7 +451,8 @@ mod tests {
     ) -> Result<()> {
         let mut taggedvardict = taggedvardict_from_strs(vars);
         let mut st = StatementTree::parse(&e).unwrap();
-        apply_substitutions(&mut st, &mut taggedvardict)?;
+        let mut codegen = CodeGen::new_empty();
+        apply_substitutions(&mut codegen, &mut st, &mut taggedvardict)?;
         let subbed_taggedvardict = taggedvardict_from_strs(subbed_vars);
         let subbed_st = StatementTree::parse(&subbed_e).unwrap();
         assert_eq!(st, subbed_st);
