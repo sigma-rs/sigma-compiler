@@ -5,6 +5,7 @@
 
 use super::codegen::CodeGen;
 use super::sigma::combiners::*;
+use super::sigma::types::expr_type_tokens;
 use super::syntax::taggedvardict_to_vardict;
 use super::{TaggedIdent, TaggedScalar, TaggedVarDict};
 use quote::quote;
@@ -219,6 +220,9 @@ pub fn apply_substitutions(
     st: &mut StatementTree,
     vars: &mut TaggedVarDict,
 ) -> Result<()> {
+    // Construct the VarDict corresponding to vars
+    let vardict = taggedvardict_to_vardict(vars);
+
     // Gather mutable references to all Exprs in the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
     // the StatementTree, but that's fine.
@@ -251,15 +255,17 @@ pub fn apply_substitutions(
             std::mem::swap(&mut expr, *leafexpr);
             // This "if let" is guaranteed to succeed
             if let Expr::Assign(syn::ExprAssign { right, .. }) = expr {
-                let used_priv_scalars = priv_scalar_set(&right, vars);
-                if !subs_vars.insert(id.to_string()) {
-                    return Err(Error::new(id.span(), "variable substituted multiple times"));
+                if let Ok((_, right_tokens)) = expr_type_tokens(&vardict, &right) {
+                    let used_priv_scalars = priv_scalar_set(&right, vars);
+                    if !subs_vars.insert(id.to_string()) {
+                        return Err(Error::new(id.span(), "variable substituted multiple times"));
+                    }
+                    codegen.prove_append(quote! {
+                        assert!(#id == #right_tokens);
+                    });
+                    let right = paren_if_needed(*right);
+                    subs.push_back((id, right, used_priv_scalars));
                 }
-                let right = paren_if_needed(*right);
-                codegen.prove_append(quote! {
-                    assert!(#id == #right);
-                });
-                subs.push_back((id, right, used_priv_scalars));
             }
         }
     }

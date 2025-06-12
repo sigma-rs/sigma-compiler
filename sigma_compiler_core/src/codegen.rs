@@ -337,7 +337,6 @@ impl CodeGen {
         // Output the generated module for this protocol
         let dump_use = if cfg!(feature = "dump") {
             quote! {
-                use ff::PrimeField;
                 use group::GroupEncoding;
             }
         } else {
@@ -346,6 +345,7 @@ impl CodeGen {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use ff::PrimeField;
                 #dump_use
 
                 #group_types
