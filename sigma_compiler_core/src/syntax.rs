@@ -132,6 +132,7 @@ impl From<&TaggedIdent> for AExprType {
             TaggedIdent::Scalar(ts) => Self::Scalar {
                 is_pub: ts.is_pub,
                 is_vec: ts.is_vec,
+                val: None,
             },
             TaggedIdent::Point(tp) => Self::Point {
                 is_pub: true,
