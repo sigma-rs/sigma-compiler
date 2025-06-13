@@ -345,7 +345,7 @@ impl CodeGen {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
-                use ff::PrimeField;
+                use group::ff::PrimeField;
                 #dump_use
 
                 #group_types
