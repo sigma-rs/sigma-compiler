@@ -184,7 +184,8 @@ impl CodeGen {
         let group_name = &self.group_name;
 
         let group_types = quote! {
-            pub type Scalar = <super::#group_name as super::Group>::Scalar;
+            use super::group;
+            pub type Scalar = <super::#group_name as group::Group>::Scalar;
             pub type Point = super::#group_name;
         };
 
