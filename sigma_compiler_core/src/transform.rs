@@ -306,9 +306,8 @@ pub fn apply_substitutions(
 
 #[cfg(test)]
 mod tests {
-    use super::super::TaggedPoint;
+    use super::super::syntax::taggedvardict_from_strs;
     use super::*;
-    use std::collections::HashMap;
 
     #[test]
     fn leaf_true_test() {
@@ -433,20 +432,6 @@ mod tests {
                 )
             },
         );
-    }
-
-    fn taggedvardict_from_strs((scalar_strs, point_strs): (&[&str], &[&str])) -> TaggedVarDict {
-        let mut vars = HashMap::new();
-
-        for scalar in scalar_strs {
-            let ts: TaggedScalar = syn::parse_str(scalar).unwrap();
-            vars.insert(ts.id.to_string(), TaggedIdent::Scalar(ts));
-        }
-        for point in point_strs {
-            let tp: TaggedPoint = syn::parse_str(point).unwrap();
-            vars.insert(tp.id.to_string(), TaggedIdent::Point(tp));
-        }
-        vars
     }
 
     fn substitution_tester(

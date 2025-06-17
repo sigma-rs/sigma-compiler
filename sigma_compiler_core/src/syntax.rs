@@ -157,6 +157,23 @@ pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
         .collect()
 }
 
+#[cfg(test)]
+/// Convert a list of strings describing `Scalar`s and a list of strings
+/// describing `Point`s into a [`TaggedVarDict`]
+pub fn taggedvardict_from_strs((scalar_strs, point_strs): (&[&str], &[&str])) -> TaggedVarDict {
+    let mut vars = HashMap::new();
+
+    for scalar in scalar_strs {
+        let ts: TaggedScalar = syn::parse_str(scalar).unwrap();
+        vars.insert(ts.id.to_string(), TaggedIdent::Scalar(ts));
+    }
+    for point in point_strs {
+        let tp: TaggedPoint = syn::parse_str(point).unwrap();
+        vars.insert(tp.id.to_string(), TaggedIdent::Point(tp));
+    }
+    vars
+}
+
 /// The [`SigmaCompSpec`] struct is the result of parsing the macro
 /// input.
 #[derive(Debug)]

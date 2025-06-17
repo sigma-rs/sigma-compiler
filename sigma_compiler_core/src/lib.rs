@@ -8,6 +8,7 @@ pub mod sigma {
     pub mod types;
 }
 mod codegen;
+mod pedersen;
 mod syntax;
 mod transform;
 

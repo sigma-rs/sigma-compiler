@@ -155,6 +155,20 @@ impl StatementTree {
         Ok(StatementTree::And(children?))
     }
 
+    /// Return a vector of references to all of the leaves in the
+    /// [`StatementTree`]
+    pub fn leaves(&self) -> Vec<&Expr> {
+        match self {
+            StatementTree::Leaf(ref e) => vec![e],
+            StatementTree::And(v) | StatementTree::Or(v) | StatementTree::Thresh(_, v) => {
+                v.iter().fold(Vec::<&Expr>::new(), |mut b, st| {
+                    b.extend(st.leaves());
+                    b
+                })
+            }
+        }
+    }
+
     /// Return a vector of mutable references to all of the leaves in
     /// the [`StatementTree`]
     pub fn leaves_mut(&mut self) -> Vec<&mut Expr> {
