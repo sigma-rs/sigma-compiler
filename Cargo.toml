@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 sigma_compiler_derive = { path = "sigma_compiler_derive" }
 group = "0.13"
+sigma-rs = { path = "../sigma" }
 
 [dev-dependencies]
 curve25519-dalek = { version = "4", features = [ "group", "rand_core", "digest" ] }
+rand = "0.8.5"
