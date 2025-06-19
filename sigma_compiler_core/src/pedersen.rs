@@ -108,6 +108,43 @@ impl LinScalar {
             ..self
         })
     }
+
+    /// Add a public `Scalar` expression to a [`LinScalar`]
+    pub fn add_opt_pub_scalar_expr(self, opsexpr: Option<Expr>) -> Result<Self> {
+        if let Some(psexpr) = opsexpr {
+            Ok(Self {
+                pub_scalar_expr: if let Some(expr) = self.pub_scalar_expr {
+                    let ppsexpr = paren_if_needed(psexpr);
+                    Some(parse_quote! { #expr + #ppsexpr })
+                } else {
+                    Some(psexpr)
+                },
+                ..self
+            })
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// Add a [`LinScalar`] to a [`LinScalar`].
+    ///
+    /// The private variables must match.
+    pub fn add_linscalar(self, arg: Self) -> Result<Self> {
+        if self.id != arg.id {
+            return Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "private variables in added LinScalars do not match",
+            ));
+        }
+        Self {
+            coeff: self.coeff.checked_add(arg.coeff).ok_or(Error::new(
+                proc_macro2::Span::call_site(),
+                "i128 add overflow",
+            ))?,
+            ..self
+        }
+        .add_opt_pub_scalar_expr(arg.pub_scalar_expr)
+    }
 }
 
 /// A representation of `b*A` where `b` is a public `Scalar` [arithmetic
@@ -126,8 +163,9 @@ impl CIndPoint {
     /// Negate a [`CIndPoint`]
     pub fn neg(self) -> Result<Self> {
         Ok(Self {
-            coeff: Some(if let Some(expr) = &self.coeff {
-                parse_quote! { -#expr }
+            coeff: Some(if let Some(expr) = self.coeff {
+                let pexpr = paren_if_needed(expr);
+                parse_quote! { -#pexpr }
             } else {
                 parse_quote! { -1 }
             }),
@@ -289,7 +327,27 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         rarg: (AExprType, PedersenExpr),
         restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(larg.1)
+        match (larg.1, rarg.1) {
+            // Adding two PubScalarExprs yields a PubScalarExpr
+            (PedersenExpr::PubScalarExpr(lexpr), PedersenExpr::PubScalarExpr(rexpr)) => Ok(
+                PedersenExpr::PubScalarExpr(parse_quote! { #lexpr + #rexpr }),
+            ),
+            // Adding a PubScalarExpr and a LinScalar yields a LinScalar
+            (PedersenExpr::PubScalarExpr(psexpr), PedersenExpr::LinScalar(linscalar))
+            | (PedersenExpr::LinScalar(linscalar), PedersenExpr::PubScalarExpr(psexpr)) => Ok(
+                PedersenExpr::LinScalar(linscalar.add_opt_pub_scalar_expr(Some(psexpr))?),
+            ),
+            // Adding two LinScalars yields a LinScalar if they're for
+            // the same private variable
+            (PedersenExpr::LinScalar(llinscalar), PedersenExpr::LinScalar(rlinscalar)) => Ok(
+                PedersenExpr::LinScalar(llinscalar.add_linscalar(rlinscalar)?),
+            ),
+            // Nothing else is valid
+            _ => Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "not a component of a Pedersen commitment",
+            )),
+        }
     }
 
     /// Called when adding two `Point`s
