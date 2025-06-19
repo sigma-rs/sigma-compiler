@@ -142,7 +142,7 @@ fn priv_scalar_set(e: &Expr, taggedvardict: &TaggedVarDict) -> HashSet<String> {
 /// remains `c` and `(a+b)` remains `(a+b)`.
 ///
 /// [arithmetic expression]: super::sigma::types::expr_type
-fn paren_if_needed(expr: Expr) -> Expr {
+pub fn paren_if_needed(expr: Expr) -> Expr {
     match expr {
         Expr::Unary(_) | Expr::Binary(_) => parse_quote! { (#expr) },
         _ => expr,

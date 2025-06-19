@@ -15,6 +15,7 @@
 use super::sigma::combiners::*;
 use super::sigma::types::*;
 use super::syntax::*;
+use super::transform::paren_if_needed;
 use std::collections::{HashMap, HashSet};
 use syn::parse::Result;
 use syn::visit::Visit;
@@ -75,7 +76,8 @@ pub fn unique_random_scalars(vars: &TaggedVarDict, st: &StatementTree) -> HashSe
 
 /// A representation of `a*x + b` where `a` is a constant `Scalar`, `b`
 /// is a public `Scalar` [arithmetic expression], and `x` is a private
-/// `Scalar` variable
+/// `Scalar` variable.  `a` is optional, and defaults to `1`. `b` is
+/// optional, and defaults to `0`
 ///
 /// [arithmetic expression]: expr_type
 pub struct LinScalar {
@@ -89,9 +91,55 @@ pub struct LinScalar {
     pub is_vec: bool,
 }
 
-/// A representation of `(a*x + b)*A` where `a` is a constant `Scalar`,
-/// `b` is a public `Scalar` [arithmetic expression], `x` is a private
-/// `Scalar` variable, and `A` is a computationally independent `Point`
+impl LinScalar {
+    /// Negate a [`LinScalar`]
+    pub fn neg(self) -> Result<Self> {
+        Ok(Self {
+            coeff: self.coeff.checked_neg().ok_or(Error::new(
+                proc_macro2::Span::call_site(),
+                "i128 neg overflow",
+            ))?,
+            pub_scalar_expr: if let Some(expr) = self.pub_scalar_expr {
+                let pexpr = paren_if_needed(expr);
+                Some(parse_quote! { -#pexpr })
+            } else {
+                None
+            },
+            ..self
+        })
+    }
+}
+
+/// A representation of `b*A` where `b` is a public `Scalar` [arithmetic
+/// expression] (default to `1`) and `A` is a computationally
+/// independent `Point`.
+///
+/// [arithmetic expression]: expr_type
+pub struct CIndPoint {
+    /// The public `Scalar` expression `b`
+    pub coeff: Option<Expr>,
+    /// The public `Point` `A`
+    pub id: Ident,
+}
+
+impl CIndPoint {
+    /// Negate a [`CIndPoint`]
+    pub fn neg(self) -> Result<Self> {
+        Ok(Self {
+            coeff: Some(if let Some(expr) = &self.coeff {
+                parse_quote! { -#expr }
+            } else {
+                parse_quote! { -1 }
+            }),
+            ..self
+        })
+    }
+}
+
+/// A representation of `(a*x + b)*A` where `a` is a constant `Scalar`
+/// (default to `1`), `b` is a public `Scalar` [arithmetic expression]
+/// (default to `0`), `x` is a private `Scalar` variable, and `A` is a
+/// computationally independent `Point`
 pub struct Term {
     /// The `Scalar` expression `a*x + b`
     pub coeff: LinScalar,
@@ -99,11 +147,22 @@ pub struct Term {
     pub id: Ident,
 }
 
+impl Term {
+    /// Negate a [`Term`]
+    pub fn neg(self) -> Result<Self> {
+        Ok(Self {
+            coeff: self.coeff.neg()?,
+            ..self
+        })
+    }
+}
+
 /// A representation of `(a*x+b)*A + (c*r+d)*B` where `a` and `c` are a
-/// constant non-zero `Scalar`s, `b`, and `d` are public `Scalar`s or
-/// constants (or combinations of those), `r` is a random private
-/// `Scalar` that appears nowhere else in the [`StatementTree`], and `A`
-/// and `B` are computationally independent public `Point`s.
+/// constant non-zero `Scalar`s (default to `1`), `b`, and `d` are
+/// public `Scalar`s or constants or combinations of those (default to
+/// `0`), `x` is a private `Scalar`, `r` is a random private `Scalar`
+/// that appears nowhere else in the [`StatementTree`], and `A` and `B`
+/// are computationally independent public `Point`s.
 pub struct Pedersen {
     /// The term containing the variable being committed to (`x` above)
     pub var_term: Term,
@@ -111,8 +170,16 @@ pub struct Pedersen {
     pub rand_term: Term,
 }
 
-/// Get the `Ident` for the committed private `Scalar` in a [`Pedersen`]
 impl Pedersen {
+    /// Negate a [`Pedersen`]
+    pub fn neg(self) -> Result<Self> {
+        Ok(Self {
+            var_term: self.var_term.neg()?,
+            rand_term: self.rand_term.neg()?,
+        })
+    }
+
+    /// Get the `Ident` for the committed private `Scalar` in a [`Pedersen`]
     pub fn var(&self) -> Option<Ident> {
         Some(self.var_term.coeff.id.clone())
     }
@@ -122,7 +189,7 @@ impl Pedersen {
 pub enum PedersenExpr {
     PubScalarExpr(Expr),
     LinScalar(LinScalar),
-    CIndPoint(Ident),
+    CIndPoint(CIndPoint),
     Term(Term),
     Pedersen(Pedersen),
 }
@@ -164,7 +231,10 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
             }
             TaggedIdent::Point(TaggedPoint { is_cind: true, .. }) => {
                 // A bare cind Point is a CIndPoint
-                Ok(PedersenExpr::CIndPoint(id.clone()))
+                Ok(PedersenExpr::CIndPoint(CIndPoint {
+                    coeff: None,
+                    id: id.clone(),
+                }))
             }
             TaggedIdent::Point(TaggedPoint { is_cind: false, .. }) => {
                 // Not a part of a valid Pedersen expression
@@ -187,7 +257,15 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
 
     /// Called for unary negation
     fn neg(&mut self, arg: (AExprType, PedersenExpr), restype: AExprType) -> Result<PedersenExpr> {
-        Ok(arg.1)
+        match arg.1 {
+            PedersenExpr::PubScalarExpr(expr) => {
+                Ok(PedersenExpr::PubScalarExpr(parse_quote! { -#expr }))
+            }
+            PedersenExpr::LinScalar(linscalar) => Ok(PedersenExpr::LinScalar(linscalar.neg()?)),
+            PedersenExpr::CIndPoint(cind) => Ok(PedersenExpr::CIndPoint(cind.neg()?)),
+            PedersenExpr::Term(term) => Ok(PedersenExpr::Term(term.neg()?)),
+            PedersenExpr::Pedersen(pedersen) => Ok(PedersenExpr::Pedersen(pedersen.neg()?)),
+        }
     }
 
     /// Called for a parenthesized expression
@@ -196,7 +274,12 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         arg: (AExprType, PedersenExpr),
         restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(arg.1)
+        match arg.1 {
+            PedersenExpr::PubScalarExpr(expr) => {
+                Ok(PedersenExpr::PubScalarExpr(parse_quote! { (#expr) }))
+            }
+            _ => Ok(arg.1),
+        }
     }
 
     /// Called when adding two `Scalar`s
