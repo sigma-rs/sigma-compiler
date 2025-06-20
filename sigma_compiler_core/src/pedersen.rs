@@ -1170,5 +1170,33 @@ mod test {
                 },
             }),
         );
+
+        recognize_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3 * (2*x + a*b) * A + B * (3 * r - 7)
+            },
+            Some(Pedersen {
+                var_term: Term {
+                    coeff: LinScalar {
+                        coeff: 6,
+                        pub_scalar_expr: Some(parse_quote! { (a * b) * 3i128 }),
+                        id: parse_quote! {x},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {A},
+                },
+                rand_term: Term {
+                    coeff: LinScalar {
+                        coeff: 3,
+                        pub_scalar_expr: Some(parse_quote! { -7i128 }),
+                        id: parse_quote! {r},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {B},
+                },
+            }),
+        );
     }
 }
