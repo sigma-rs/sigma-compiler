@@ -80,6 +80,7 @@ pub fn unique_random_scalars(vars: &TaggedVarDict, st: &StatementTree) -> HashSe
 /// optional, and defaults to `0`
 ///
 /// [arithmetic expression]: expr_type
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LinScalar {
     /// The coefficient `a`
     pub coeff: i128,
@@ -145,6 +146,27 @@ impl LinScalar {
         }
         .add_opt_pub_scalar_expr(arg.pub_scalar_expr)
     }
+
+    /// Multiply a [`LinScalar`] by a constant
+    pub fn mul_const(self, arg: i128) -> Result<Self> {
+        Ok(Self {
+            coeff: self.coeff.checked_mul(arg).ok_or(Error::new(
+                proc_macro2::Span::call_site(),
+                "i128 mul overflow",
+            ))?,
+            pub_scalar_expr: if let Some(expr) = self.pub_scalar_expr {
+                if arg == 1 {
+                    Some(expr)
+                } else {
+                    let pexpr = paren_if_needed(expr);
+                    Some(parse_quote! { #pexpr * #arg })
+                }
+            } else {
+                None
+            },
+            ..self
+        })
+    }
 }
 
 /// A representation of `b*A` where `b` is a public `Scalar` [arithmetic
@@ -152,9 +174,12 @@ impl LinScalar {
 /// independent `Point`.
 ///
 /// [arithmetic expression]: expr_type
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CIndPoint {
     /// The public `Scalar` expression `b`
     pub coeff: Option<Expr>,
+    /// The value of the coeff, if it's a constant
+    pub coeff_val: Option<i128>,
     /// The public `Point` `A`
     pub id: Ident,
 }
@@ -169,6 +194,63 @@ impl CIndPoint {
             } else {
                 parse_quote! { -1 }
             }),
+            coeff_val: if let Some(val) = self.coeff_val {
+                val.checked_neg()
+            } else {
+                None
+            },
+            ..self
+        })
+    }
+
+    /// Add a [`CIndPoint`] to a [`CIndPoint`]
+    pub fn add_cind(self, arg: CIndPoint) -> Result<Self> {
+        if self.id != arg.id {
+            return Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "public points in added CIndPoints do not match",
+            ));
+        }
+        let lexpr = if let Some(expr) = self.coeff {
+            expr
+        } else {
+            parse_quote! { 1 }
+        };
+        let rexpr = if let Some(expr) = arg.coeff {
+            paren_if_needed(expr)
+        } else {
+            parse_quote! { 1 }
+        };
+        let coeff_val = if let (Some(lval), Some(rval)) = (self.coeff_val, arg.coeff_val) {
+            lval.checked_add(rval)
+        } else {
+            None
+        };
+        Ok(Self {
+            coeff: Some(parse_quote! { #lexpr + #rexpr }),
+            coeff_val,
+            ..self
+        })
+    }
+
+    /// Multiply a public Scalar [`Expr`] by a [`CIndPoint`].  val is
+    /// Some(v) if the Expr is the constant v.
+    pub fn mul_pub_scalar_expr(self, expr: Expr, val: Option<i128>) -> Result<Self> {
+        let coeff = match self.coeff {
+            None => Some(expr),
+            Some(selfexpr) => {
+                let pleft = paren_if_needed(selfexpr);
+                let pright = paren_if_needed(expr);
+                Some(parse_quote! { #pleft * #pright })
+            }
+        };
+        let coeff_val = match (self.coeff_val, val) {
+            (Some(leftval), Some(rightval)) => leftval.checked_mul(rightval),
+            _ => None,
+        };
+        Ok(Self {
+            coeff,
+            coeff_val,
             ..self
         })
     }
@@ -178,6 +260,7 @@ impl CIndPoint {
 /// (default to `1`), `b` is a public `Scalar` [arithmetic expression]
 /// (default to `0`), `x` is a private `Scalar` variable, and `A` is a
 /// computationally independent `Point`
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Term {
     /// The `Scalar` expression `a*x + b`
     pub coeff: LinScalar,
@@ -193,6 +276,34 @@ impl Term {
             ..self
         })
     }
+
+    /// Add a [`CIndPoint`] to a [`Term`]
+    pub fn add_cind(self, arg: CIndPoint) -> Result<Self> {
+        if self.id != arg.id {
+            return Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "public points in added CIndPoint and Term do not match",
+            ));
+        }
+        Ok(Self {
+            coeff: self.coeff.add_opt_pub_scalar_expr(arg.coeff)?,
+            ..self
+        })
+    }
+
+    /// Add a [`Term`] to a [`Term`]
+    pub fn add_term(self, arg: Term) -> Result<Self> {
+        if self.id != arg.id {
+            return Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "public points in added Terms do not match",
+            ));
+        }
+        Ok(Self {
+            coeff: self.coeff.add_linscalar(arg.coeff)?,
+            ..self
+        })
+    }
 }
 
 /// A representation of `(a*x+b)*A + (c*r+d)*B` where `a` and `c` are a
@@ -201,6 +312,7 @@ impl Term {
 /// `0`), `x` is a private `Scalar`, `r` is a random private `Scalar`
 /// that appears nowhere else in the [`StatementTree`], and `A` and `B`
 /// are computationally independent public `Point`s.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pedersen {
     /// The term containing the variable being committed to (`x` above)
     pub var_term: Term,
@@ -209,6 +321,11 @@ pub struct Pedersen {
 }
 
 impl Pedersen {
+    /// Get the `Ident` for the committed private `Scalar` in a [`Pedersen`]
+    pub fn var(&self) -> Option<Ident> {
+        Some(self.var_term.coeff.id.clone())
+    }
+
     /// Negate a [`Pedersen`]
     pub fn neg(self) -> Result<Self> {
         Ok(Self {
@@ -217,13 +334,55 @@ impl Pedersen {
         })
     }
 
-    /// Get the `Ident` for the committed private `Scalar` in a [`Pedersen`]
-    pub fn var(&self) -> Option<Ident> {
-        Some(self.var_term.coeff.id.clone())
+    /// Add a [`CIndPoint`] to a [`Pedersen`]
+    pub fn add_cind(self, arg: CIndPoint) -> Result<Self> {
+        if self.var_term.id == arg.id {
+            Ok(Self {
+                var_term: self.var_term.add_cind(arg)?,
+                ..self
+            })
+        } else if self.rand_term.id == arg.id {
+            // This branch actually can't happen, since the private
+            // random Scalar variable can only appear once in the
+            // StatementTree.
+            Ok(Self {
+                rand_term: self.rand_term.add_cind(arg)?,
+                ..self
+            })
+        } else {
+            Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "public points in added Pedersen and CIndPoint do not match",
+            ))
+        }
+    }
+
+    /// Add a [`Term`] to a [`Pedersen`]
+    pub fn add_term(self, arg: Term) -> Result<Self> {
+        if self.var_term.id == arg.id {
+            Ok(Self {
+                var_term: self.var_term.add_term(arg)?,
+                ..self
+            })
+        } else if self.rand_term.id == arg.id {
+            // This branch actually can't happen, since the private
+            // random Scalar variable can only appear once in the
+            // StatementTree.
+            Ok(Self {
+                rand_term: self.rand_term.add_term(arg)?,
+                ..self
+            })
+        } else {
+            Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "public points in added Pedersen and CIndPoint do not match",
+            ))
+        }
     }
 }
 
 /// Components of a Pedersen commitment
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PedersenExpr {
     PubScalarExpr(Expr),
     LinScalar(LinScalar),
@@ -271,6 +430,7 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
                 // A bare cind Point is a CIndPoint
                 Ok(PedersenExpr::CIndPoint(CIndPoint {
                     coeff: None,
+                    coeff_val: Some(1),
                     id: id.clone(),
                 }))
             }
@@ -294,7 +454,7 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
     }
 
     /// Called for unary negation
-    fn neg(&mut self, arg: (AExprType, PedersenExpr), restype: AExprType) -> Result<PedersenExpr> {
+    fn neg(&mut self, arg: (AExprType, PedersenExpr), _restype: AExprType) -> Result<PedersenExpr> {
         match arg.1 {
             PedersenExpr::PubScalarExpr(expr) => {
                 Ok(PedersenExpr::PubScalarExpr(parse_quote! { -#expr }))
@@ -310,7 +470,7 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
     fn paren(
         &mut self,
         arg: (AExprType, PedersenExpr),
-        restype: AExprType,
+        _restype: AExprType,
     ) -> Result<PedersenExpr> {
         match arg.1 {
             PedersenExpr::PubScalarExpr(expr) => {
@@ -325,7 +485,7 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         &mut self,
         larg: (AExprType, PedersenExpr),
         rarg: (AExprType, PedersenExpr),
-        restype: AExprType,
+        _restype: AExprType,
     ) -> Result<PedersenExpr> {
         match (larg.1, rarg.1) {
             // Adding two PubScalarExprs yields a PubScalarExpr
@@ -338,7 +498,7 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
                 PedersenExpr::LinScalar(linscalar.add_opt_pub_scalar_expr(Some(psexpr))?),
             ),
             // Adding two LinScalars yields a LinScalar if they're for
-            // the same private variable
+            // the same private Scalar
             (PedersenExpr::LinScalar(llinscalar), PedersenExpr::LinScalar(rlinscalar)) => Ok(
                 PedersenExpr::LinScalar(llinscalar.add_linscalar(rlinscalar)?),
             ),
@@ -355,19 +515,89 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         &mut self,
         larg: (AExprType, PedersenExpr),
         rarg: (AExprType, PedersenExpr),
-        restype: AExprType,
+        _restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(larg.1)
+        match (larg.1, rarg.1) {
+            // Adding two CIndPoints yields a CIndPoint if they're for
+            // the same public Point
+            (PedersenExpr::CIndPoint(lcind), PedersenExpr::CIndPoint(rcind)) => {
+                Ok(PedersenExpr::CIndPoint(lcind.add_cind(rcind)?))
+            }
+            // Adding a CIndPoint to a Term yields a Term if they're for
+            // the same public Point
+            (PedersenExpr::CIndPoint(cind), PedersenExpr::Term(term))
+            | (PedersenExpr::Term(term), PedersenExpr::CIndPoint(cind)) => {
+                Ok(PedersenExpr::Term(term.add_cind(cind)?))
+            }
+            // Adding a Term to a Term yields a Term if they're for the
+            // same public Point and private Scalar, or a Pedersen if
+            // they're different, but one is for a private random Scalar
+            // that only appears once in the [`StatementTree`]
+            (PedersenExpr::Term(lterm), PedersenExpr::Term(rterm)) => {
+                if lterm.id == rterm.id {
+                    Ok(PedersenExpr::Term(lterm.add_term(rterm)?))
+                } else if self.randoms.contains(&rterm.coeff.id.to_string()) {
+                    Ok(PedersenExpr::Pedersen(Pedersen {
+                        var_term: lterm,
+                        rand_term: rterm,
+                    }))
+                } else if self.randoms.contains(&lterm.coeff.id.to_string()) {
+                    Ok(PedersenExpr::Pedersen(Pedersen {
+                        var_term: rterm,
+                        rand_term: lterm,
+                    }))
+                } else {
+                    Err(Error::new(
+                        proc_macro2::Span::call_site(),
+                        "public points in added Terms do not form a Pedersen commitment",
+                    ))
+                }
+            }
+            // Adding a CIndPoint to a Pedersen yields a Pedersen if one
+            // of the two public Points in the Pedersen matches the one
+            // in the CIndPoint
+            (PedersenExpr::CIndPoint(cind), PedersenExpr::Pedersen(pedersen))
+            | (PedersenExpr::Pedersen(pedersen), PedersenExpr::CIndPoint(cind)) => {
+                Ok(PedersenExpr::Pedersen(pedersen.add_cind(cind)?))
+            }
+            // Adding a Term to a Pedersen yields a Pedersen if one of
+            // the two public Points in the Pedersen matches the one
+            // in the Term
+            (PedersenExpr::Term(term), PedersenExpr::Pedersen(pedersen))
+            | (PedersenExpr::Pedersen(pedersen), PedersenExpr::Term(term)) => {
+                Ok(PedersenExpr::Pedersen(pedersen.add_term(term)?))
+            }
+
+            // Note that it's impossible to add a Pedersen to a
+            // Pedersen, since the private random Scalar only appears
+            // once in the StatementTree.
+
+            // Nothing else is valid
+            _ => Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "not a component of a Pedersen commitment",
+            )),
+        }
     }
 
     /// Called when subtracting two `Scalar`s
     fn sub_scalars(
         &mut self,
-        larg: (AExprType, PedersenExpr),
-        rarg: (AExprType, PedersenExpr),
+        (largtype, larg): (AExprType, PedersenExpr),
+        (rargtype, rarg): (AExprType, PedersenExpr),
         restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(larg.1)
+        if let PedersenExpr::PubScalarExpr(ref lexpr) = larg {
+            if let PedersenExpr::PubScalarExpr(ref rexpr) = rarg {
+                // Subtracting two PubScalarExprs yields a PubScalarExpr
+                return Ok(PedersenExpr::PubScalarExpr(
+                    parse_quote! { #lexpr - #rexpr },
+                ));
+            }
+        }
+        // Anything else gets the default treatment
+        let negrarg = self.neg((rargtype, rarg), rargtype)?;
+        self.add_scalars((largtype, larg), (rargtype, negrarg), restype)
     }
 
     /// Called when subtracting two `Point`s
@@ -377,7 +607,9 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         rarg: (AExprType, PedersenExpr),
         restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(larg.1)
+        let rargtype = rarg.0;
+        let negrarg = self.neg(rarg, rargtype)?;
+        self.add_points(larg, (rargtype, negrarg), restype)
     }
 
     /// Called when multiplying two `Scalar`s
@@ -385,9 +617,43 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         &mut self,
         larg: (AExprType, PedersenExpr),
         rarg: (AExprType, PedersenExpr),
-        restype: AExprType,
+        _restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(larg.1)
+        match (larg, rarg) {
+            // Multiplying two PubScalarExprs yields a PubScalarExpr
+            ((_, PedersenExpr::PubScalarExpr(lexpr)), (_, PedersenExpr::PubScalarExpr(rexpr))) => {
+                Ok(PedersenExpr::PubScalarExpr(
+                    parse_quote! { #lexpr * #rexpr },
+                ))
+            }
+            // Multiplying a PubScalarExpr by a LinScalar yields a
+            // LinScalar if the PubScalarExpr is actually a constant
+            // (indicated by the AExprType's val field containing
+            // Some(val))
+            (
+                (
+                    AExprType::Scalar {
+                        val: Some(psval), ..
+                    },
+                    PedersenExpr::PubScalarExpr(_),
+                ),
+                (_, PedersenExpr::LinScalar(linscalar)),
+            )
+            | (
+                (_, PedersenExpr::LinScalar(linscalar)),
+                (
+                    AExprType::Scalar {
+                        val: Some(psval), ..
+                    },
+                    PedersenExpr::PubScalarExpr(_),
+                ),
+            ) => Ok(PedersenExpr::LinScalar(linscalar.mul_const(psval)?)),
+            // Nothing else is valid
+            _ => Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "not a component of a Pedersen commitment",
+            )),
+        }
     }
 
     /// Called when multiplying a `Scalar` and a `Point` (the `Scalar`
@@ -396,9 +662,38 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         &mut self,
         sarg: (AExprType, PedersenExpr),
         parg: (AExprType, PedersenExpr),
-        restype: AExprType,
+        _restype: AExprType,
     ) -> Result<PedersenExpr> {
-        Ok(sarg.1)
+        match (sarg.0, sarg.1, parg.1) {
+            // Multiplying a PubScalarExpr by a CIndPoint yields a
+            // CIndPoint
+            (
+                AExprType::Scalar { val, .. },
+                PedersenExpr::PubScalarExpr(pub_expr),
+                PedersenExpr::CIndPoint(cind),
+            ) => Ok(PedersenExpr::CIndPoint(
+                cind.mul_pub_scalar_expr(pub_expr, val)?,
+            )),
+            // Multiplying a LinScalar by a CIndPoint yields a Term
+            // if the coefficient in the CIndPoint is a constant
+            (
+                _,
+                PedersenExpr::LinScalar(linscalar),
+                PedersenExpr::CIndPoint(CIndPoint {
+                    coeff_val: Some(cval),
+                    id,
+                    ..
+                }),
+            ) => Ok(PedersenExpr::Term(Term {
+                coeff: linscalar.mul_const(cval)?,
+                id,
+            })),
+            // Nothing else is valid
+            _ => Err(Error::new(
+                proc_macro2::Span::call_site(),
+                "not a component of a Pedersen commitment",
+            )),
+        }
     }
 }
 
@@ -422,6 +717,11 @@ pub fn recognize(
         if matches!(aetype, AExprType::Point { is_vec: true, .. }) {
             return None;
         }
+    }
+    // It's not allowed for either the committed variable or the random
+    // variable to have a 0 coefficient
+    if pedersen.var_term.coeff.coeff == 0 || pedersen.rand_term.coeff.coeff == 0 {
+        return None;
     }
     Some(pedersen)
 }
@@ -478,6 +778,397 @@ mod test {
                 )
             },
             ["s", "t"].as_slice(),
+        );
+    }
+
+    fn fold_tester(
+        vars: (&[&str], &[&str]),
+        randoms: &[&str],
+        e: Expr,
+        expected_out: Option<PedersenExpr>,
+    ) {
+        let taggedvardict = taggedvardict_from_strs(vars);
+        let vardict = taggedvardict_to_vardict(&taggedvardict);
+        let mut randoms_hash = HashSet::new();
+        for r in randoms {
+            randoms_hash.insert(r.to_string());
+        }
+        let mut fold = RecognizeFold {
+            vars: &taggedvardict,
+            randoms: &randoms_hash,
+        };
+        let output = if let Ok((_, pe)) = fold.fold(&vardict, &e) {
+            Some(pe)
+        } else {
+            None
+        };
+        assert_eq!(output, expected_out);
+    }
+
+    #[test]
+    fn fold_test() {
+        let vars = (
+            [
+                "x", "y", "z", "pub a", "pub b", "pub c", "rand r", "rand s", "rand t",
+            ]
+            .as_slice(),
+            ["C", "cind A", "cind B"].as_slice(),
+        );
+        let randoms = ["r", "s", "t"].as_slice();
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                1
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { 1i128 })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                1 + 2
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { 3i128 })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                1 - 2
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { -1i128 })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { a })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a + 1
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { a + 1i128 })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a + b + 1
+            },
+            Some(PedersenExpr::PubScalarExpr(parse_quote! { a + b + 1i128 })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a + 2*b + 1
+            },
+            Some(PedersenExpr::PubScalarExpr(
+                parse_quote! { a + 2i128 * b + 1i128 },
+            )),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a - 2*b + 1
+            },
+            Some(PedersenExpr::PubScalarExpr(
+                parse_quote! { a - 2i128 * b + 1i128 },
+            )),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a - (2*b + 1)
+            },
+            Some(PedersenExpr::PubScalarExpr(
+                parse_quote! { a - (2i128 * b + 1i128) },
+            )),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                x
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 1,
+                pub_scalar_expr: None,
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                x + 2
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 1,
+                pub_scalar_expr: Some(parse_quote! { 2i128 }),
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*x + 2
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 3,
+                pub_scalar_expr: Some(parse_quote! { 2i128 }),
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + 2)
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 3,
+                pub_scalar_expr: Some(parse_quote! { 2i128 * 3i128 }),
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x - 2)
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 3,
+                pub_scalar_expr: Some(parse_quote! { (-2i128) * 3i128 }),
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a)
+            },
+            Some(PedersenExpr::LinScalar(LinScalar {
+                coeff: 3,
+                pub_scalar_expr: Some(parse_quote! { a * 3i128 }),
+                id: parse_quote! {x},
+                is_vec: false,
+            })),
+        );
+
+        // Adding two private Scalars
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + y)
+            },
+            None,
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a * A
+            },
+            Some(PedersenExpr::CIndPoint(CIndPoint {
+                coeff: Some(parse_quote! { a }),
+                coeff_val: None,
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                a * A * b
+            },
+            Some(PedersenExpr::CIndPoint(CIndPoint {
+                coeff: Some(parse_quote! { a * b }),
+                coeff_val: None,
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                A * b * (c+1)
+            },
+            Some(PedersenExpr::CIndPoint(CIndPoint {
+                coeff: Some(parse_quote! { b * (c + 1i128) }),
+                coeff_val: None,
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a) * A
+            },
+            Some(PedersenExpr::Term(Term {
+                coeff: LinScalar {
+                    coeff: 3,
+                    pub_scalar_expr: Some(parse_quote! { a * 3i128 }),
+                    id: parse_quote! {x},
+                    is_vec: false,
+                },
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a) * A + A * b
+            },
+            Some(PedersenExpr::Term(Term {
+                coeff: LinScalar {
+                    coeff: 3,
+                    pub_scalar_expr: Some(parse_quote! { a * 3i128 + b }),
+                    id: parse_quote! {x},
+                    is_vec: false,
+                },
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a) * A + A * b * (c + 1)
+            },
+            Some(PedersenExpr::Term(Term {
+                coeff: LinScalar {
+                    coeff: 3,
+                    pub_scalar_expr: Some(parse_quote! { a * 3i128 + (b*(c+1i128)) }),
+                    id: parse_quote! {x},
+                    is_vec: false,
+                },
+                id: parse_quote! {A},
+            })),
+        );
+
+        fold_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a) * A + A * b * (c + 1) + r * B
+            },
+            Some(PedersenExpr::Pedersen(Pedersen {
+                var_term: Term {
+                    coeff: LinScalar {
+                        coeff: 3,
+                        pub_scalar_expr: Some(parse_quote! { a * 3i128 + (b * (c + 1i128)) }),
+                        id: parse_quote! {x},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {A},
+                },
+                rand_term: Term {
+                    coeff: LinScalar {
+                        coeff: 1,
+                        pub_scalar_expr: None,
+                        id: parse_quote! {r},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {B},
+                },
+            })),
+        );
+    }
+
+    fn recognize_tester(
+        vars: (&[&str], &[&str]),
+        randoms: &[&str],
+        e: Expr,
+        expected_out: Option<Pedersen>,
+    ) {
+        let taggedvardict = taggedvardict_from_strs(vars);
+        let vardict = taggedvardict_to_vardict(&taggedvardict);
+        let mut randoms_hash = HashSet::new();
+        for r in randoms {
+            randoms_hash.insert(r.to_string());
+        }
+        let output = recognize(&taggedvardict, &randoms_hash, &vardict, &e);
+        assert_eq!(output, expected_out);
+    }
+
+    #[test]
+    fn recognize_test() {
+        let vars = (
+            [
+                "x", "y", "z", "pub a", "pub b", "pub c", "rand r", "rand s", "rand t",
+            ]
+            .as_slice(),
+            ["C", "cind A", "cind B"].as_slice(),
+        );
+        let randoms = ["r", "s", "t"].as_slice();
+
+        recognize_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                3*(x + a) * A + A * b * (c + 1) + r * B
+            },
+            Some(Pedersen {
+                var_term: Term {
+                    coeff: LinScalar {
+                        coeff: 3,
+                        pub_scalar_expr: Some(parse_quote! { a * 3i128 + (b * (c + 1i128)) }),
+                        id: parse_quote! {x},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {A},
+                },
+                rand_term: Term {
+                    coeff: LinScalar {
+                        coeff: 1,
+                        pub_scalar_expr: None,
+                        id: parse_quote! {r},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {B},
+                },
+            }),
         );
     }
 }
