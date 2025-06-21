@@ -304,6 +304,14 @@ impl Term {
             ..self
         })
     }
+
+    /// Multiply a [`Term`] by a constant
+    pub fn mul_const(self, arg: i128) -> Result<Self> {
+        Ok(Self {
+            coeff: self.coeff.mul_const(arg)?,
+            ..self
+        })
+    }
 }
 
 /// A representation of `(a*x+b)*A + (c*r+d)*B` where `a` and `c` are a
@@ -378,6 +386,14 @@ impl Pedersen {
                 "public points in added Pedersen and CIndPoint do not match",
             ))
         }
+    }
+
+    /// Multiply a [`Pedersen`] by a constant
+    pub fn mul_const(self, arg: i128) -> Result<Self> {
+        Ok(Self {
+            var_term: self.var_term.mul_const(arg)?,
+            rand_term: self.rand_term.mul_const(arg)?,
+        })
     }
 }
 
@@ -688,6 +704,26 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
                 coeff: linscalar.mul_const(cval)?,
                 id,
             })),
+            // Multiplying a PubScalarExpr by a Term yields a Term if
+            // the PubScalarExpr is a constant
+            (
+                AExprType::Scalar {
+                    val: Some(const_val),
+                    ..
+                },
+                PedersenExpr::PubScalarExpr(_),
+                PedersenExpr::Term(term),
+            ) => Ok(PedersenExpr::Term(term.mul_const(const_val)?)),
+            // Multiplying a PubScalarExpr by a Pedersen yields a
+            // Pedersen if the PubScalarExpr is a constant
+            (
+                AExprType::Scalar {
+                    val: Some(const_val),
+                    ..
+                },
+                PedersenExpr::PubScalarExpr(_),
+                PedersenExpr::Pedersen(pedersen),
+            ) => Ok(PedersenExpr::Pedersen(pedersen.mul_const(const_val)?)),
             // Nothing else is valid
             _ => Err(Error::new(
                 proc_macro2::Span::call_site(),
@@ -1191,6 +1227,34 @@ mod test {
                     coeff: LinScalar {
                         coeff: 3,
                         pub_scalar_expr: Some(parse_quote! { -7i128 }),
+                        id: parse_quote! {r},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {B},
+                },
+            }),
+        );
+
+        recognize_tester(
+            vars,
+            randoms,
+            parse_quote! {
+                (3 * (2*x + a*b) * A + B * (3 * r - 7))* (7-2)
+            },
+            Some(Pedersen {
+                var_term: Term {
+                    coeff: LinScalar {
+                        coeff: 30,
+                        pub_scalar_expr: Some(parse_quote! { ((a * b) * 3i128) * 5i128 }),
+                        id: parse_quote! {x},
+                        is_vec: false,
+                    },
+                    id: parse_quote! {A},
+                },
+                rand_term: Term {
+                    coeff: LinScalar {
+                        coeff: 15,
+                        pub_scalar_expr: Some(parse_quote! { (-7i128) * 5i128 }),
                         id: parse_quote! {r},
                         is_vec: false,
                     },
