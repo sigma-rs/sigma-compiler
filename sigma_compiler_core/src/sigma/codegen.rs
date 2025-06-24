@@ -242,7 +242,7 @@ impl<'a> CodeGen<'a> {
             let witness_ids = witness_fields.field_list();
 
             quote! {
-                pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
+                pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>, SigmaError> {
                     #dumper
                     let Params { #params_ids } = *params;
                     let Witness { #witness_ids } = *witness;
@@ -266,7 +266,7 @@ impl<'a> CodeGen<'a> {
             };
             let params_ids = pub_params_fields.field_list();
             quote! {
-                pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
+                pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
                     #dumper
                     let Params { #params_ids } = *params;
                     Ok(())
@@ -287,6 +287,7 @@ impl<'a> CodeGen<'a> {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
                 #group_types

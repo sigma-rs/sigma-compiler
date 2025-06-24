@@ -172,7 +172,7 @@ impl CodeGen {
             let codegen_witness_var = format_ident!("{}_sigma_witness", "codegen");
 
             quote! {
-                pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
+                pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>, SigmaError> {
                     #dumper
                     let Params { #params_ids } = *params;
                     let Witness { #witness_ids } = *witness;
@@ -205,7 +205,7 @@ impl CodeGen {
             let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
             let codegen_params_var = format_ident!("{}_sigma_params", "codegen");
             quote! {
-                pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
+                pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
                     #dumper
                     let Params { #params_ids } = *params;
                     let #codegen_params_var = sigma::Params {
@@ -230,6 +230,7 @@ impl CodeGen {
             #[allow(non_snake_case)]
             pub mod #proto_name {
                 use group::ff::PrimeField;
+                use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
                 #group_types
