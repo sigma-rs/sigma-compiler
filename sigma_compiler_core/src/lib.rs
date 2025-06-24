@@ -4,6 +4,7 @@ use proc_macro2::TokenStream;
 /// `sigma` crate are for now included as submodules of a local `sigma`
 /// module
 pub mod sigma {
+    pub mod codegen;
     pub mod combiners;
     pub mod types;
 }
