@@ -1,64 +1,13 @@
 //! A module for generating the code produced by this macro.  This code
 //! will interact with the underlying `sigma` macro.
 
-use super::syntax::*;
 use super::sigma::codegen::StructFieldList;
+use super::syntax::*;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 #[cfg(test)]
 use syn::parse_quote;
-use syn::visit_mut::{self, VisitMut};
-use syn::{Expr, Ident, Token};
-
-fn push_vars(structfieldlist: &mut StructFieldList,
-    vars: &TaggedVarDict, is_pub: bool) {
-    for (_, ti) in vars.iter() {
-        match ti {
-            TaggedIdent::Scalar(st) => {
-                if st.is_pub == is_pub {
-                    if st.is_vec {
-                        structfieldlist.push_vecscalar(&st.id)
-                    } else {
-                        structfieldlist.push_scalar(&st.id)
-                    }
-                }
-            }
-            TaggedIdent::Point(pt) => {
-                if is_pub {
-                    if pt.is_vec {
-                        structfieldlist.push_vecpoint(&pt.id)
-                    } else {
-                        structfieldlist.push_point(&pt.id)
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// An implementation of the
-/// [`VisitMut`](https://docs.rs/syn/latest/syn/visit_mut/trait.VisitMut.html)
-/// trait that massages the provided statements.
-///
-/// This massaging currently consists of:
-///   - Changing equality from = to ==
-struct StatementFixup {}
-
-impl VisitMut for StatementFixup {
-    fn visit_expr_mut(&mut self, node: &mut Expr) {
-        if let Expr::Assign(assn) = node {
-            *node = Expr::Binary(syn::ExprBinary {
-                attrs: assn.attrs.clone(),
-                left: assn.left.clone(),
-                op: syn::BinOp::Eq(Token![==](assn.eq_token.span)),
-                right: assn.right.clone(),
-            });
-        }
-        // Unless we bailed out above, continue with the default
-        // traversal
-        visit_mut::visit_expr_mut(self, node);
-    }
-}
+use syn::Ident;
 
 /// The main struct to handle code generation for this macro.
 ///
@@ -110,7 +59,7 @@ impl CodeGen {
     /// Generate the code to be output by this macro.
     ///
     /// `emit_prover` and `emit_verifier` are as in
-    /// [`super::sigma_compiler_core`].
+    /// [`sigma_compiler_core`](super::sigma_compiler_core).
     pub fn generate(
         &self,
         spec: &SigmaCompSpec,
@@ -126,8 +75,33 @@ impl CodeGen {
             pub type Point = super::#group_name;
         };
 
+        // vardict contains the variables that were defined in the macro
+        // call to [`sigma_compiler`]
+        let vardict = taggedvardict_to_vardict(&self.vars);
+        // sigma_rs_vardict contains the variables that we are passing
+        // to sigma_rs.  We may have removed some via substitution, and
+        // we may have added some when compiling statements like range
+        // assertions into underlying linear combination assertions.
+        let sigma_rs_vardict = taggedvardict_to_vardict(&spec.vars);
+
+        // Generate the code that uses the underlying sigma_rs API
+        let sigma_rs_codegen = super::sigma::codegen::CodeGen::new(
+            format_ident!("sigma"),
+            format_ident!("Point"),
+            &sigma_rs_vardict,
+            &spec.statements,
+        );
+        let sigma_rs_code = sigma_rs_codegen.generate(emit_prover, emit_verifier);
+
         let mut pub_params_fields = StructFieldList::default();
-        push_vars(&mut pub_params_fields, &self.vars, true);
+        pub_params_fields.push_vars(&vardict, true);
+        let mut witness_fields = StructFieldList::default();
+        witness_fields.push_vars(&vardict, false);
+
+        let mut sigma_rs_params_fields = StructFieldList::default();
+        sigma_rs_params_fields.push_vars(&sigma_rs_vardict, true);
+        let mut sigma_rs_witness_fields = StructFieldList::default();
+        sigma_rs_witness_fields.push_vars(&sigma_rs_vardict, false);
 
         // Generate the public params struct definition
         let params_def = {
@@ -166,9 +140,6 @@ impl CodeGen {
             }
         };
 
-        let mut witness_fields = StructFieldList::default();
-        push_vars(&mut witness_fields, &self.vars, false);
-
         // Generate the witness struct definition
         let witness_def = if emit_prover {
             let decls = witness_fields.field_decls();
@@ -194,26 +165,25 @@ impl CodeGen {
             };
             let params_ids = pub_params_fields.field_list();
             let witness_ids = witness_fields.field_list();
-            let mut assert_statementtree = spec.statements.clone();
-            let mut statement_fixup = StatementFixup {};
-            assert_statementtree
-                .leaves_mut()
-                .into_iter()
-                .for_each(|expr| statement_fixup.visit_expr_mut(expr));
-            let assert_statements = assert_statementtree.leaves_mut();
+            let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
+            let sigma_rs_witness_ids = sigma_rs_witness_fields.field_list();
             let prove_code = &self.prove_code;
+            let codegen_params_var = format_ident!("{}_sigma_params", "codegen");
+            let codegen_witness_var = format_ident!("{}_sigma_witness", "codegen");
 
             quote! {
-                // The "#[allow(unused_variables)]" is temporary, until we
-                // actually call the underlying sigma macro
-                #[allow(unused_variables)]
                 pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>,()> {
                     #dumper
                     let Params { #params_ids } = *params;
                     let Witness { #witness_ids } = *witness;
                     #prove_code
-                    #(assert!(#assert_statements);)*
-                    Ok(Vec::<u8>::default())
+                    let #codegen_params_var = sigma::Params {
+                        #sigma_rs_params_ids
+                    };
+                    let #codegen_witness_var = sigma::Witness {
+                        #sigma_rs_witness_ids
+                    };
+                    sigma::prove(&#codegen_params_var, &#codegen_witness_var)
                 }
             }
         } else {
@@ -232,14 +202,16 @@ impl CodeGen {
                 quote! {}
             };
             let params_ids = pub_params_fields.field_list();
+            let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
+            let codegen_params_var = format_ident!("{}_sigma_params", "codegen");
             quote! {
-                // The "#[allow(unused_variables)]" is temporary, until we
-                // actually call the underlying sigma macro
-                #[allow(unused_variables)]
                 pub fn verify(params: &Params, proof: &[u8]) -> Result<(),()> {
                     #dumper
                     let Params { #params_ids } = *params;
-                    Ok(())
+                    let #codegen_params_var = sigma::Params {
+                        #sigma_rs_params_ids
+                    };
+                    sigma::verify(&#codegen_params_var, proof)
                 }
             }
         } else {
@@ -261,9 +233,11 @@ impl CodeGen {
                 #dump_use
 
                 #group_types
+
+                #sigma_rs_code
+
                 #params_def
                 #witness_def
-
                 #prove_func
                 #verify_func
             }

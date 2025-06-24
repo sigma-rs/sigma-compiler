@@ -11,3 +11,4 @@ sigma-rs = { path = "../sigma" }
 [dev-dependencies]
 curve25519-dalek = { version = "4", features = [ "group", "rand_core", "digest" ] }
 rand = "0.8.5"
+sha2 = "0.10"
