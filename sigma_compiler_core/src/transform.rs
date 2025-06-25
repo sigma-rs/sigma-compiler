@@ -261,7 +261,12 @@ pub fn apply_substitutions(
                         return Err(Error::new(id.span(), "variable substituted multiple times"));
                     }
                     codegen.prove_append(quote! {
-                        assert!(#id == #right_tokens);
+                        // It's OK to have a test that observably fails
+                        // for illegal inputs (but is constant time for
+                        // valid inputs)
+                        if #id != #right_tokens {
+                            return Err(SigmaError::VerificationFailure);
+                        }
                     });
                     let right = paren_if_needed(*right);
                     subs.push_back((id, right, used_priv_scalars));
