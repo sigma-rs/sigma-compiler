@@ -9,18 +9,18 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::Ident;
 
-// Names and types of fields that might end up in a generated struct
-enum StructField {
+/// Names and types of fields that might end up in a generated struct
+pub enum StructField {
     Scalar(Ident),
     VecScalar(Ident),
     Point(Ident),
     VecPoint(Ident),
 }
 
-// A list of StructField items
+/// A list of StructField items
 #[derive(Default)]
 pub struct StructFieldList {
-    fields: Vec<StructField>,
+    pub fields: Vec<StructField>,
 }
 
 impl StructFieldList {
@@ -204,6 +204,7 @@ impl<'a> CodeGen<'a> {
                 quote! {}
             };
             quote! {
+                #[derive(Clone)]
                 pub struct Params {
                     #decls
                 }
@@ -219,6 +220,7 @@ impl<'a> CodeGen<'a> {
         let witness_def = if emit_prover {
             let decls = witness_fields.field_decls();
             quote! {
+                #[derive(Clone)]
                 pub struct Witness {
                     #decls
                 }
@@ -244,8 +246,8 @@ impl<'a> CodeGen<'a> {
             quote! {
                 pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>, SigmaError> {
                     #dumper
-                    let Params { #params_ids } = *params;
-                    let Witness { #witness_ids } = *witness;
+                    let Params { #params_ids } = params.clone();
+                    let Witness { #witness_ids } = witness.clone();
                     Ok(Vec::<u8>::default())
                 }
             }
@@ -268,7 +270,7 @@ impl<'a> CodeGen<'a> {
             quote! {
                 pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
                     #dumper
-                    let Params { #params_ids } = *params;
+                    let Params { #params_ids } = params.clone();
                     Ok(())
                 }
             }
@@ -287,6 +289,7 @@ impl<'a> CodeGen<'a> {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use group::ff::PrimeField;
                 use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
