@@ -21,10 +21,35 @@ pub struct CodeGen {
     proto_name: Ident,
     group_name: Ident,
     vars: TaggedVarDict,
+    // A prefix that does not appear at the beginning of any variable
+    // name in vars
+    unique_prefix: String,
     prove_code: TokenStream,
 }
 
 impl CodeGen {
+    /// Find a prefix that does not appear at the beginning of any
+    /// variable name in `vars`
+    fn unique_prefix(vars: &TaggedVarDict) -> String {
+        'outer: for tag in 0usize.. {
+            let try_prefix = if tag == 0 {
+                "gen__".to_string()
+            } else {
+                format!("gen{}__", tag)
+            };
+            for v in vars.keys() {
+                if v.starts_with(&try_prefix) {
+                    continue 'outer;
+                }
+            }
+            return try_prefix;
+        }
+        // The compiler complains if this isn't here, but it will only
+        // get hit if vars contains at least usize::MAX entries, which
+        // isn't going to happen.
+        String::new()
+    }
+
     /// Create a new [`CodeGen`] given the [`SigmaCompSpec`] you get by
     /// parsing the macro input.
     pub fn new(spec: &SigmaCompSpec) -> Self {
@@ -32,6 +57,7 @@ impl CodeGen {
             proto_name: spec.proto_name.clone(),
             group_name: spec.group_name.clone(),
             vars: spec.vars.clone(),
+            unique_prefix: Self::unique_prefix(&spec.vars),
             prove_code: quote! {},
         }
     }
@@ -43,6 +69,7 @@ impl CodeGen {
             proto_name: parse_quote! { proto },
             group_name: parse_quote! { G },
             vars: TaggedVarDict::default(),
+            unique_prefix: "gen__".into(),
             prove_code: quote! {},
         }
     }
@@ -168,8 +195,8 @@ impl CodeGen {
             let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
             let sigma_rs_witness_ids = sigma_rs_witness_fields.field_list();
             let prove_code = &self.prove_code;
-            let codegen_params_var = format_ident!("{}_sigma_params", "codegen");
-            let codegen_witness_var = format_ident!("{}_sigma_witness", "codegen");
+            let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
+            let codegen_witness_var = format_ident!("{}sigma_witness", self.unique_prefix);
 
             quote! {
                 pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>, SigmaError> {
@@ -203,7 +230,7 @@ impl CodeGen {
             };
             let params_ids = pub_params_fields.field_list();
             let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
-            let codegen_params_var = format_ident!("{}_sigma_params", "codegen");
+            let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
             quote! {
                 pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
                     #dumper
