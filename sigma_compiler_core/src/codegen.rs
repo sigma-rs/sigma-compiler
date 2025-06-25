@@ -135,9 +135,9 @@ impl CodeGen {
     /// this function.  If `is_vec` is `true`, then you should also call
     /// [`verify_pre_params_append`](Self::verify_pre_params_append)
     /// with code like `quote!{ let mut #id = Vec::<Point>::new();
-    /// #id.resize(#len); }` where `len` is the number of elements you
-    /// expect to have in the vector (computed at runtime, perhaps based
-    /// on the values of public parameters).
+    /// #id.resize(#len, Point::default()); }` where `len` is the number
+    /// of elements you expect to have in the vector (computed at
+    /// runtime, perhaps based on the values of public parameters).
     pub fn gen_point(
         &mut self,
         vars: &mut TaggedVarDict,
