@@ -10,6 +10,7 @@ pub mod sigma {
 }
 mod codegen;
 mod pedersen;
+mod rangeproof;
 mod syntax;
 mod transform;
 

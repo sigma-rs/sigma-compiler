@@ -407,7 +407,9 @@ pub enum PedersenExpr {
     Pedersen(Pedersen),
 }
 
-/// A struct that implements [`AExprFold`] in service of [`recognize`]
+/// A struct that implements [`AExprFold`] in service of
+/// [`recognize_pedersen`], [`recognize_linscalar`], and
+/// [`recognize_pubscalar`]
 struct RecognizeFold<'a> {
     /// The [`TaggedVarDict`] that maps variable names to their types
     vars: &'a TaggedVarDict,
@@ -786,21 +788,23 @@ pub fn recognize_linscalar(
 /// evaluates to a public `Scalar`.
 ///
 /// The returned [`bool`] is true if the expression evaluates to a
-/// vector
+/// vector.  The [`i128`] is the value of the expression if it is a
+/// constant.
 pub fn recognize_pubscalar(
     vars: &TaggedVarDict,
     vardict: &VarDict,
     expr: &Expr,
-) -> Option<bool> {
+) -> Option<(bool, Option<i128>)> {
     let mut fold = RecognizeFold {
         vars,
         randoms: &HashSet::new(),
     };
-    let Ok((AExprType::Scalar{is_vec, ..}, PedersenExpr::PubScalarExpr(_)))
-        = fold.fold(vardict, expr) else {
+    let Ok((AExprType::Scalar { is_vec, val, .. }, PedersenExpr::PubScalarExpr(_))) =
+        fold.fold(vardict, expr)
+    else {
         return None;
     };
-    Some(is_vec)
+    Some((is_vec, val))
 }
 
 #[cfg(test)]
@@ -1364,7 +1368,7 @@ mod test {
     fn recognize_pubscalar_tester(
         vars: (&[&str], &[&str]),
         e: Expr,
-        expected_out: Option<bool>,
+        expected_out: Option<(bool, Option<i128>)>,
     ) {
         let taggedvardict = taggedvardict_from_strs(vars);
         let vardict = taggedvardict_to_vardict(&taggedvardict);
@@ -1376,7 +1380,15 @@ mod test {
     fn recognize_pubscalar_test() {
         let vars = (
             [
-                "x", "y", "z", "pub a", "pub vec b", "pub c", "rand r", "rand s", "rand t",
+                "x",
+                "y",
+                "z",
+                "pub a",
+                "pub vec b",
+                "pub c",
+                "rand r",
+                "rand s",
+                "rand t",
             ]
             .as_slice(),
             ["C", "cind A", "cind B"].as_slice(),
@@ -1395,7 +1407,7 @@ mod test {
             parse_quote! {
                 3
             },
-            Some(false),
+            Some((false, Some(3))),
         );
 
         recognize_pubscalar_tester(
@@ -1403,7 +1415,7 @@ mod test {
             parse_quote! {
                 a
             },
-            Some(false),
+            Some((false, None)),
         );
 
         recognize_pubscalar_tester(
@@ -1411,7 +1423,7 @@ mod test {
             parse_quote! {
                 3*(a + 1)
             },
-            Some(false),
+            Some((false, None)),
         );
 
         recognize_pubscalar_tester(
@@ -1419,7 +1431,7 @@ mod test {
             parse_quote! {
                 3*(a + b)
             },
-            Some(true),
+            Some((true, None)),
         );
     }
 }
