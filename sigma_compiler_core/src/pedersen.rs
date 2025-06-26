@@ -772,7 +772,7 @@ pub fn recognize_linscalar(
         vars,
         randoms: &HashSet::new(),
     };
-    let Ok((aetype, PedersenExpr::LinScalar(linscalar))) = fold.fold(vardict, expr) else {
+    let Ok((_, PedersenExpr::LinScalar(linscalar))) = fold.fold(vardict, expr) else {
         return None;
     };
     // A 0 coefficient is not allowed
@@ -780,6 +780,27 @@ pub fn recognize_linscalar(
         return None;
     }
     Some(linscalar)
+}
+
+/// Parse an [`Expr`] to see if we recognize it as an expression that
+/// evaluates to a public `Scalar`.
+///
+/// The returned [`bool`] is true if the expression evaluates to a
+/// vector
+pub fn recognize_pubscalar(
+    vars: &TaggedVarDict,
+    vardict: &VarDict,
+    expr: &Expr,
+) -> Option<bool> {
+    let mut fold = RecognizeFold {
+        vars,
+        randoms: &HashSet::new(),
+    };
+    let Ok((AExprType::Scalar{is_vec, ..}, PedersenExpr::PubScalarExpr(_)))
+        = fold.fold(vardict, expr) else {
+        return None;
+    };
+    Some(is_vec)
 }
 
 #[cfg(test)]
@@ -1188,17 +1209,6 @@ mod test {
         assert_eq!(output, expected_out);
     }
 
-    fn recognize_linscalar_tester(
-        vars: (&[&str], &[&str]),
-        e: Expr,
-        expected_out: Option<LinScalar>,
-    ) {
-        let taggedvardict = taggedvardict_from_strs(vars);
-        let vardict = taggedvardict_to_vardict(&taggedvardict);
-        let output = recognize_linscalar(&taggedvardict, &vardict, &e);
-        assert_eq!(output, expected_out);
-    }
-
     #[test]
     fn recognize_pedersen_test() {
         let vars = (
@@ -1295,6 +1305,17 @@ mod test {
         );
     }
 
+    fn recognize_linscalar_tester(
+        vars: (&[&str], &[&str]),
+        e: Expr,
+        expected_out: Option<LinScalar>,
+    ) {
+        let taggedvardict = taggedvardict_from_strs(vars);
+        let vardict = taggedvardict_to_vardict(&taggedvardict);
+        let output = recognize_linscalar(&taggedvardict, &vardict, &e);
+        assert_eq!(output, expected_out);
+    }
+
     #[test]
     fn recognize_linscalar_test() {
         let vars = (
@@ -1337,6 +1358,68 @@ mod test {
                 3*(x + a + 1) - x*4 + x
             },
             None,
+        );
+    }
+
+    fn recognize_pubscalar_tester(
+        vars: (&[&str], &[&str]),
+        e: Expr,
+        expected_out: Option<bool>,
+    ) {
+        let taggedvardict = taggedvardict_from_strs(vars);
+        let vardict = taggedvardict_to_vardict(&taggedvardict);
+        let output = recognize_pubscalar(&taggedvardict, &vardict, &e);
+        assert_eq!(output, expected_out);
+    }
+
+    #[test]
+    fn recognize_pubscalar_test() {
+        let vars = (
+            [
+                "x", "y", "z", "pub a", "pub vec b", "pub c", "rand r", "rand s", "rand t",
+            ]
+            .as_slice(),
+            ["C", "cind A", "cind B"].as_slice(),
+        );
+
+        recognize_pubscalar_tester(
+            vars,
+            parse_quote! {
+                3*(x + a + 1)
+            },
+            None,
+        );
+
+        recognize_pubscalar_tester(
+            vars,
+            parse_quote! {
+                3
+            },
+            Some(false),
+        );
+
+        recognize_pubscalar_tester(
+            vars,
+            parse_quote! {
+                a
+            },
+            Some(false),
+        );
+
+        recognize_pubscalar_tester(
+            vars,
+            parse_quote! {
+                3*(a + 1)
+            },
+            Some(false),
+        );
+
+        recognize_pubscalar_tester(
+            vars,
+            parse_quote! {
+                3*(a + b)
+            },
+            Some(true),
         );
     }
 }
