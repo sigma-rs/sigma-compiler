@@ -328,7 +328,11 @@ impl CodeGen {
             };
 
             quote! {
-                pub fn prove(params: &Params, witness: &Witness) -> Result<Vec<u8>, SigmaError> {
+                pub fn prove(
+                    params: &Params,
+                    witness: &Witness,
+                    rng: &mut (impl CryptoRng + RngCore),
+                ) -> Result<Vec<u8>, SigmaError> {
                     #dumper
                     let Params { #params_ids } = params.clone();
                     let Witness { #witness_ids } = witness.clone();
@@ -342,7 +346,11 @@ impl CodeGen {
                     };
                     #sent_params_code
                     #proof_var.extend(
-                        sigma::prove(&#codegen_params_var, &#codegen_witness_var)?
+                        sigma::prove(
+                            &#codegen_params_var,
+                            &#codegen_witness_var,
+                            rng,
+                        )?
                     );
                     Ok(#proof_var)
                 }
@@ -432,7 +440,8 @@ impl CodeGen {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
-                use group::ff::PrimeField;
+                use sigma_compiler::rand::{CryptoRng, RngCore};
+                use sigma_compiler::group::ff::PrimeField;
                 use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
