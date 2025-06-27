@@ -330,8 +330,8 @@ pub struct Pedersen {
 
 impl Pedersen {
     /// Get the `Ident` for the committed private `Scalar` in a [`Pedersen`]
-    pub fn var(&self) -> Option<Ident> {
-        Some(self.var_term.coeff.id.clone())
+    pub fn var(&self) -> Ident {
+        self.var_term.coeff.id.clone()
     }
 
     /// Negate a [`Pedersen`]
@@ -805,6 +805,39 @@ pub fn recognize_pubscalar(
         return None;
     };
     Some((is_vec, val))
+}
+
+/// A representation of an assignment [`Expr`] assigning a [Pedersen
+/// expression](Pedersen) to a public `Point`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PedersenAssignment {
+    /// The public `Point` being assigned to
+    pub id: Ident,
+    /// The Pedersen expression being assigned
+    pub pedersen: Pedersen,
+}
+
+/// Parse an [`Expr`] to see if we recognize it as an assignment
+/// statement assigning a [Pedersen expression](Pedersen) to an
+/// [`struct@Ident`] for a public `Point`.
+pub fn recognize_pedersen_assignment(
+    vars: &TaggedVarDict,
+    randoms: &HashSet<String>,
+    vardict: &VarDict,
+    expr: &Expr,
+) -> Option<PedersenAssignment> {
+    let Expr::Assign(syn::ExprAssign { left, right, .. }) = expr else {
+        return None;
+    };
+    let Expr::Path(syn::ExprPath { path, .. }) = left.as_ref() else {
+        return None;
+    };
+    let id = path.get_ident()?;
+    let pedersen = recognize_pedersen(vars, randoms, vardict, right)?;
+    Some(PedersenAssignment {
+        id: id.clone(),
+        pedersen,
+    })
 }
 
 #[cfg(test)]

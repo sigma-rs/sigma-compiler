@@ -39,6 +39,9 @@ pub fn sigma_compiler_core(
     // Apply any substitution transformations
     substitution::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
 
+    // Apply any range statement transformations
+    rangeproof::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
+
     /* Just some test code for now:
     let C_var = codegen.gen_point(&mut spec.vars, &quote::format_ident!("C"), false, true);
     let V_var = codegen.gen_point(&mut spec.vars, &quote::format_ident!("V"), true, true);

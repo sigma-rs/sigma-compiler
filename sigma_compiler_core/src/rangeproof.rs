@@ -20,13 +20,17 @@
 //! private.
 
 use super::codegen::CodeGen;
-use super::pedersen::{recognize_linscalar, recognize_pubscalar, LinScalar};
+use super::pedersen::{
+    recognize_linscalar, recognize_pedersen_assignment, recognize_pubscalar, unique_random_scalars,
+    LinScalar, PedersenAssignment,
+};
 use super::sigma::combiners::*;
 use super::sigma::types::VarDict;
 use super::syntax::taggedvardict_to_vardict;
 use super::transform::paren_if_needed;
-use super::TaggedVarDict;
-use syn::{parse_quote, Expr, Result};
+use super::{TaggedIdent, TaggedPoint, TaggedVarDict};
+use std::collections::HashMap;
+use syn::{parse_quote, Expr, Ident, Result};
 
 /// A struct representing a normalized parsed range statement.
 ///
@@ -195,10 +199,50 @@ pub fn transform(
     // Make the VarDict version of the variable dictionary
     let vardict = taggedvardict_to_vardict(vars);
 
+    // A HashSet of the unique random Scalars in the macro input
+    let randoms = unique_random_scalars(vars, st);
+
     // Gather mutable references to all Exprs in the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
     // the StatementTree, but that's fine.
     let mut leaves = st.leaves_mut();
+
+    // A list of the computationally independent (non-vector) Points in
+    // the macro input.  There must be at least two of them in order to
+    // handle range statements, so that we can make Pedersen
+    // commitments.
+    let cind_points: Vec<Ident> = vars
+        .values()
+        .filter_map(|ti| {
+            if let TaggedIdent::Point(TaggedPoint {
+                is_cind: true,
+                is_vec: false,
+                id,
+                ..
+            }) = ti
+            {
+                Some(id.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Find any statements that look like Pedersen commitments in the
+    // StatementTree, and make a HashMap mapping the committed private
+    // variable to the parsed commitment.
+    let pedersens: HashMap<Ident, PedersenAssignment> = leaves
+        .iter()
+        .filter_map(|leafexpr| {
+            if let Some(ped_assign) =
+                recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
+            {
+                Some((ped_assign.pedersen.var(), ped_assign))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     // For each leaf expression, see if it looks like a range statement
     for leafexpr in leaves.iter_mut() {

@@ -126,7 +126,6 @@ pub fn paren_if_needed(expr: Expr) -> Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::super::syntax::taggedvardict_from_strs;
     use super::*;
 
     #[test]
