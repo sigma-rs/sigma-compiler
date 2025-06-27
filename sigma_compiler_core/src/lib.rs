@@ -11,6 +11,7 @@ pub mod sigma {
 mod codegen;
 mod pedersen;
 mod rangeproof;
+mod substitution;
 mod syntax;
 mod transform;
 
@@ -36,7 +37,7 @@ pub fn sigma_compiler_core(
     let mut codegen = codegen::CodeGen::new(spec);
 
     // Apply any substitution transformations
-    transform::apply_substitutions(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
+    substitution::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
 
     /* Just some test code for now:
     let C_var = codegen.gen_point(&mut spec.vars, &quote::format_ident!("C"), false, true);
