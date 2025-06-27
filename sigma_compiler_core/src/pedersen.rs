@@ -817,6 +817,14 @@ pub struct PedersenAssignment {
     pub pedersen: Pedersen,
 }
 
+impl PedersenAssignment {
+    /// Get the `Ident` for the committed private `Scalar` in a
+    /// [`PedersenAssignment`]
+    pub fn var(&self) -> Ident {
+        self.pedersen.var()
+    }
+}
+
 /// Parse an [`Expr`] to see if we recognize it as an assignment
 /// statement assigning a [Pedersen expression](Pedersen) to an
 /// [`struct@Ident`] for a public `Point`.

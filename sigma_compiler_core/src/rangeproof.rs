@@ -237,7 +237,7 @@ pub fn transform(
             if let Some(ped_assign) =
                 recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
             {
-                Some((ped_assign.pedersen.var(), ped_assign))
+                Some((ped_assign.var(), ped_assign))
             } else {
                 None
             }
