@@ -14,9 +14,10 @@
 //! where `L` is the order of the group you are using.
 //!
 //! The size of the range (`b-a`) will be known at run time, but not
-//! necessarily at compile time.  The size must fit in an [`i128`].
-//! Note that the range (and its size) are public, but the value you
-//! are stating is in the range will be private.
+//! necessarily at compile time.  The size must fit in an [`i128`] and
+//! must be strictly greater than 1.  Note that the range (and its size)
+//! are public, but the value you are stating is in the range will be
+//! private.
 
 use super::codegen::CodeGen;
 use super::pedersen::{recognize_linscalar, recognize_pubscalar, LinScalar};
