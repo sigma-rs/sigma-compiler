@@ -356,5 +356,21 @@ mod tests {
                 },
             }),
         );
+
+        parse_tester(
+            vars,
+            parse_quote! {
+                (a*b..b+c*c+7).contains(3*x+c*(a+b+2))
+            },
+            Some(RangeStatement {
+                upper: parse_quote! { b+c*c+7-(a*b) },
+                expr: LinScalar {
+                    coeff: 3,
+                    pub_scalar_expr: Some(parse_quote! { c*(a+b+2i128)-(a*b) }),
+                    id: parse_quote! {x},
+                    is_vec: false,
+                },
+            }),
+        );
     }
 }
