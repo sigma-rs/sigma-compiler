@@ -29,8 +29,9 @@ use super::sigma::types::VarDict;
 use super::syntax::taggedvardict_to_vardict;
 use super::transform::paren_if_needed;
 use super::{TaggedIdent, TaggedPoint, TaggedVarDict};
+use quote::{format_ident, quote};
 use std::collections::HashMap;
-use syn::{parse_quote, Expr, Ident, Result};
+use syn::{parse_quote, Error, Expr, Ident, Result};
 
 /// A struct representing a normalized parsed range statement.
 ///
@@ -191,16 +192,17 @@ fn parse(vars: &TaggedVarDict, vardict: &VarDict, expr: &Expr) -> Option<RangeSt
 /// Look for, and transform, range statements specified in the
 /// [`StatementTree`] into basic statements about linear combinations of
 /// `Point`s.
+#[allow(non_snake_case)] // so that Points can be capital letters
 pub fn transform(
     codegen: &mut CodeGen,
     st: &mut StatementTree,
     vars: &mut TaggedVarDict,
 ) -> Result<()> {
     // Make the VarDict version of the variable dictionary
-    let vardict = taggedvardict_to_vardict(vars);
+    let mut vardict = taggedvardict_to_vardict(vars);
 
     // A HashSet of the unique random Scalars in the macro input
-    let randoms = unique_random_scalars(vars, st);
+    let mut randoms = unique_random_scalars(vars, st);
 
     // Gather mutable references to all Exprs in the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
@@ -244,9 +246,71 @@ pub fn transform(
         })
         .collect();
 
-    // For each leaf expression, see if it looks like a range statement
+    // Count how many range statements we've seen
+    let mut range_stmt_index = 0usize;
+
     for leafexpr in leaves.iter_mut() {
-        let is_range = parse(vars, &vardict, leafexpr);
+        // For each leaf expression, see if it looks like a range statement
+        let Some(range_stmt) = parse(vars, &vardict, leafexpr) else {
+            continue;
+        };
+        range_stmt_index += 1;
+
+        // We will transform the range statement into a list of basic
+        // linear combination statements that will be ANDed together to
+        // replace the range statement in the StatementTree.  This
+        // vector holds the list of basic statements.
+        let mut basic_statements: Vec<Expr> = Vec::new();
+
+        // We'll need a Pedersen commitment to the variable in the range
+        // statement.  See if there already is one.
+        let range_id = &range_stmt.expr.id;
+        let ped_assign = if let Some(ped_assign) = pedersens.get(range_id) {
+            ped_assign.clone()
+        } else {
+            // We'll need to create a new one.  First find two
+            // computationally independent Points.
+            if cind_points.len() < 2 {
+                return Err(Error::new(
+                    proc_macro2::Span::call_site(),
+                    "At least two cind Points must be declared to support range statements",
+                ));
+            }
+            let cind_A = &cind_points[0];
+            let cind_B = &cind_points[1];
+
+            // Create new variables for the Pedersen commitment and its
+            // random Scalar.
+            let commitment_var = codegen.gen_point(
+                vars,
+                &format_ident!("range{}_{}_C", range_stmt_index, range_id),
+                false,
+                true,
+            );
+            let rand_var = codegen.gen_scalar(
+                vars,
+                &format_ident!("range{}_{}_r", range_stmt_index, range_id),
+                true,
+                false,
+            );
+
+            // Update vardict and randoms with the new vars
+            vardict = taggedvardict_to_vardict(vars);
+            randoms.insert(rand_var.to_string());
+
+            let ped_assign_expr: Expr = parse_quote! {
+                #commitment_var = #range_id * #cind_A + #rand_var * #cind_B
+            };
+            let ped_assign =
+                recognize_pedersen_assignment(vars, &randoms, &vardict, &ped_assign_expr).unwrap();
+
+            codegen.prove_append(quote! {
+                let #rand_var = Scalar::random(rng);
+                let #ped_assign_expr;
+            });
+
+            ped_assign
+        };
     }
 
     Ok(())

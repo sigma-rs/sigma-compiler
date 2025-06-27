@@ -112,7 +112,7 @@ impl CodeGen {
         is_rand: bool,
         is_vec: bool,
     ) -> Ident {
-        let id = format_ident!("{}var_{}", self.unique_prefix, base);
+        let id = format_ident!("{}{}", self.unique_prefix, base);
         vars.insert(
             id.to_string(),
             TaggedIdent::Scalar(TaggedScalar {
@@ -145,7 +145,7 @@ impl CodeGen {
         is_vec: bool,
         send_to_verifier: bool,
     ) -> Ident {
-        let id = format_ident!("{}var_{}", self.unique_prefix, base);
+        let id = format_ident!("{}{}", self.unique_prefix, base);
         vars.insert(
             id.to_string(),
             TaggedIdent::Point(TaggedPoint {
