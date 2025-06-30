@@ -8,6 +8,7 @@ sigma_compiler_derive = { path = "sigma_compiler_derive" }
 group = "0.13"
 rand = "0.8.5"
 sigma-rs = { path = "../sigma" }
+subtle = "2.6"
 
 [dev-dependencies]
 curve25519-dalek = { version = "4", features = [ "group", "rand_core", "digest" ] }
