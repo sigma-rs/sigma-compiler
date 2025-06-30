@@ -25,10 +25,11 @@ use super::pedersen::{
     LinScalar, PedersenAssignment,
 };
 use super::sigma::combiners::*;
-use super::sigma::types::VarDict;
+use super::sigma::types::{const_i128_tokens, expr_type_tokens, VarDict};
 use super::syntax::taggedvardict_to_vardict;
 use super::transform::paren_if_needed;
 use super::{TaggedIdent, TaggedPoint, TaggedVarDict};
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
 use syn::{parse_quote, Error, Expr, Ident, Result};
@@ -189,6 +190,89 @@ fn parse(vars: &TaggedVarDict, vardict: &VarDict, expr: &Expr) -> Option<RangeSt
     None
 }
 
+/// Output code to convert a commitment given by a
+/// [`PedersenAssignment`] into one for a different [`LinScalar`] of the
+/// same variable.
+fn convert_commitment(
+    output_commitment: &Ident,
+    ped_assign: &PedersenAssignment,
+    new_linscalar: &LinScalar,
+    vardict: &VarDict,
+) -> Result<TokenStream> {
+    let orig_commitment = &ped_assign.id;
+    let ped_assign_linscalar = &ped_assign.pedersen.var_term.coeff;
+    let generator = &ped_assign.pedersen.var_term.id;
+    let mut generated_code = quote! { #orig_commitment };
+    // Subtract the pub_scalar_expr in ped_assign_linscalar (if present)
+    // times the generator
+    if let Some(ref pse) = ped_assign_linscalar.pub_scalar_expr {
+        let ppse_tokens = expr_type_tokens(vardict, &paren_if_needed(pse.clone()))?.1;
+        generated_code = quote! {
+            ( #generated_code - #ppse_tokens * #generator )
+        };
+    }
+    // Divide by the coeff in ped_assign_linscalar, if present (noting
+    // it also cannot be 0, so will have an inverse)
+    if ped_assign_linscalar.coeff != 1 {
+        let coeff_tokens = const_i128_tokens(ped_assign_linscalar.coeff);
+        generated_code = quote! {
+            #coeff_tokens.inverse().unwrap() * #generated_code
+        };
+    }
+    // Now multiply by the coeff in new_linscalar, if present
+    if new_linscalar.coeff != 1 {
+        let coeff_tokens = const_i128_tokens(new_linscalar.coeff);
+        generated_code = quote! {
+            #coeff_tokens * #generated_code
+        };
+    }
+    // And add the pub_scalar_expr in new_linscalar (if present) times
+    // the generator
+    if let Some(ref pse) = new_linscalar.pub_scalar_expr {
+        let ppse_tokens = expr_type_tokens(vardict, &paren_if_needed(pse.clone()))?.1;
+        generated_code = quote! {
+            #generated_code + #ppse_tokens * #generator
+        };
+    }
+
+    Ok(quote! { let #output_commitment = #generated_code; })
+}
+
+/// Output code to convert the randomness given by a
+/// [`PedersenAssignment`] into that resulting from the conversion in
+/// [`convert_commitment`].
+fn convert_randomness(
+    output_randomness: &Ident,
+    ped_assign: &PedersenAssignment,
+    new_linscalar: &LinScalar,
+    vardict: &VarDict,
+) -> Result<TokenStream> {
+    let ped_assign_linscalar = &ped_assign.pedersen.var_term.coeff;
+    // Start with the LinScalar in ped_assign.pedersen.rand_term
+    let mut generated_code = expr_type_tokens(
+        vardict,
+        &paren_if_needed(ped_assign.pedersen.rand_term.coeff.to_expr()),
+    )?
+    .1;
+    // Divide by the coeff in ped_assign_linscalar, if present (noting
+    // it also cannot be 0, so will have an inverse)
+    if ped_assign_linscalar.coeff != 1 {
+        let coeff_tokens = const_i128_tokens(ped_assign_linscalar.coeff);
+        generated_code = quote! {
+            #coeff_tokens.inverse().unwrap() * #generated_code
+        };
+    }
+    // Now multiply by the coeff in new_linscalar, if present
+    if new_linscalar.coeff != 1 {
+        let coeff_tokens = const_i128_tokens(new_linscalar.coeff);
+        generated_code = quote! {
+            #coeff_tokens * #generated_code
+        };
+    }
+
+    Ok(quote! { let #output_randomness = #generated_code; })
+}
+
 /// Look for, and transform, range statements specified in the
 /// [`StatementTree`] into basic statements about linear combinations of
 /// `Point`s.
@@ -282,13 +366,13 @@ pub fn transform(
             // random Scalar.
             let commitment_var = codegen.gen_point(
                 vars,
-                &format_ident!("range{}_{}_C", range_stmt_index, range_id),
+                &format_ident!("range{}_{}_genC", range_stmt_index, range_id),
                 false,
                 true,
             );
             let rand_var = codegen.gen_scalar(
                 vars,
-                &format_ident!("range{}_{}_r", range_stmt_index, range_id),
+                &format_ident!("range{}_{}_genr", range_stmt_index, range_id),
                 true,
                 false,
             );
@@ -310,6 +394,48 @@ pub fn transform(
 
             ped_assign
         };
+
+        // At this point, we have a Pedersen commitment for some linear
+        // function of range_id (given by
+        // ped_assign.pedersen.var_term.coeff), using some linear
+        // function of rand_var (given by
+        // ped_assign.pedersen.rand_term.coeff) as the randomness.  But
+        // what we need is a Pedersen commitment for a possibly
+        // different linear function of range_id (given by
+        // range_stmt.expr).  So we output runtime code for both the
+        // prover and the verifier that converts the commitment, and
+        // code for just the prover that converts the randomness.
+
+        // Make a new runtime variable to hold the converted commitment
+        let commitment_var = codegen.gen_point(
+            vars,
+            &format_ident!("range{}_{}_C", range_stmt_index, range_id),
+            false,
+            false,
+        );
+        let rand_var = codegen.gen_scalar(
+            vars,
+            &format_ident!("range{}_{}_r", range_stmt_index, range_id),
+            true,
+            false,
+        );
+
+        // Update vardict and randoms with the new vars
+        vardict = taggedvardict_to_vardict(vars);
+        randoms.insert(rand_var.to_string());
+
+        codegen.prove_verify_append(convert_commitment(
+            &commitment_var,
+            &ped_assign,
+            &range_stmt.expr,
+            &vardict,
+        )?);
+        codegen.prove_append(convert_randomness(
+            &rand_var,
+            &ped_assign,
+            &range_stmt.expr,
+            &vardict,
+        )?);
     }
 
     Ok(())
@@ -319,6 +445,7 @@ pub fn transform(
 mod tests {
     use super::super::syntax::taggedvardict_from_strs;
     use super::*;
+    use std::collections::HashSet;
 
     fn parse_tester(vars: (&[&str], &[&str]), expr: Expr, expect: Option<RangeStatement>) {
         let taggedvardict = taggedvardict_from_strs(vars);
@@ -479,6 +606,160 @@ mod tests {
                     is_vec: false,
                 },
             }),
+        );
+    }
+
+    fn convert_commitment_randomness_tester(
+        vars: (&[&str], &[&str]),
+        randoms: &[&str],
+        ped_assign_expr: Expr,
+        lin_scalar_expr: Expr,
+        expect_commitment: TokenStream,
+        expect_randomness: TokenStream,
+    ) {
+        let taggedvardict = taggedvardict_from_strs(vars);
+        let vardict = taggedvardict_to_vardict(&taggedvardict);
+        let mut randoms_hash = HashSet::new();
+        for r in randoms {
+            randoms_hash.insert(r.to_string());
+        }
+        let output_commitment = format_ident! { "out" };
+        let output_randomness = format_ident! { "out_rand" };
+        let ped_assign = recognize_pedersen_assignment(
+            &taggedvardict,
+            &randoms_hash,
+            &vardict,
+            &ped_assign_expr,
+        )
+        .unwrap();
+        let lin_scalar = recognize_linscalar(&taggedvardict, &vardict, &lin_scalar_expr).unwrap();
+        assert_eq!(
+            convert_commitment(&output_commitment, &ped_assign, &lin_scalar, &vardict)
+                .unwrap()
+                .to_string(),
+            expect_commitment.to_string()
+        );
+        assert_eq!(
+            convert_randomness(&output_randomness, &ped_assign, &lin_scalar, &vardict)
+                .unwrap()
+                .to_string(),
+            expect_randomness.to_string()
+        );
+    }
+
+    #[test]
+    fn convert_commitment_randomness_test() {
+        let vars = (
+            [
+                "x", "y", "z", "pub a", "pub b", "pub c", "rand r", "rand s", "rand t",
+            ]
+            .as_slice(),
+            ["C", "cind A", "cind B"].as_slice(),
+        );
+        let randoms = ["r", "s", "t"].as_slice();
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = x*A + r*B },
+            parse_quote! { x },
+            quote! { let out = C; },
+            quote! { let out_rand = r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = x*A + r*B },
+            parse_quote! { 2 * x },
+            quote! { let out = Scalar::from_u128(2u128) * C; },
+            quote! { let out_rand = Scalar::from_u128(2u128) * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = x*A + r*B },
+            parse_quote! { 2 * x + 12 },
+            quote! { let out = Scalar::from_u128(2u128) * C +
+            Scalar::from_u128(12u128) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = x*A + r*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) * C +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = 3*x*A + r*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).inverse().unwrap() * C +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).inverse().unwrap() * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = -3*x*A + r*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() * C +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = (-3*x+4+b)*A + r*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() *
+            (C - (Scalar::from_u128(4u128) + b) * A) +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() * r; },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = (-3*x+4+b)*A + 2*r*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() *
+            (C - (Scalar::from_u128(4u128) + b) * A) +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() *
+            (Scalar::from_u128(2u128) * r); },
+        );
+
+        convert_commitment_randomness_tester(
+            vars,
+            &randoms,
+            parse_quote! { C = (-3*x+4+b)*A + (2*r+c-3)*B },
+            parse_quote! { 2 * x + 12 + a },
+            quote! { let out = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() *
+            (C - (Scalar::from_u128(4u128) + b) * A) +
+            (Scalar::from_u128(12u128) + a) * A; },
+            quote! { let out_rand = Scalar::from_u128(2u128) *
+            Scalar::from_u128(3u128).neg().inverse().unwrap() *
+            (Scalar::from_u128(2u128) * r +
+            (c + (Scalar::from_u128(3u128).neg()))); },
         );
     }
 }

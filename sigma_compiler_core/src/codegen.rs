@@ -193,6 +193,21 @@ impl CodeGen {
         };
     }
 
+    /// Append some code to both the generated `prove` and `verify`
+    /// functions
+    pub fn prove_verify_append(&mut self, code: TokenStream) {
+        let prove_code = &self.prove_code;
+        self.prove_code = quote! {
+            #prove_code
+            #code
+        };
+        let verify_code = &self.verify_code;
+        self.verify_code = quote! {
+            #verify_code
+            #code
+        };
+    }
+
     /// Generate the code to be output by this macro.
     ///
     /// `emit_prover` and `emit_verifier` are as in

@@ -114,7 +114,7 @@ pub fn vardict_from_strs(strs: &[(&str, &str)]) -> VarDict {
 /// Given an [`i128`] value, output a [`TokenStream`] representing a
 /// valid Rust expression that evaluates to a `Scalar` having that
 /// value.
-fn const_i128_tokens(val: i128) -> TokenStream {
+pub fn const_i128_tokens(val: i128) -> TokenStream {
     let uval = val.unsigned_abs();
     if val >= 0 {
         quote! { Scalar::from_u128(#uval) }
