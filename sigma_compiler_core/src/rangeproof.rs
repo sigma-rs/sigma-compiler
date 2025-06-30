@@ -236,13 +236,12 @@ pub fn transform(
     let pedersens: HashMap<Ident, PedersenAssignment> = leaves
         .iter()
         .filter_map(|leafexpr| {
-            if let Some(ped_assign) =
-                recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
-            {
-                Some((ped_assign.var(), ped_assign))
-            } else {
-                None
-            }
+            // See if we recognize this leaf expression as a
+            // PedersenAssignment, and if so, make a pair mapping its
+            // variable to the PedersenAssignment.  (The "collect()"
+            // will turn the list of pairs into a HashMap.)
+            recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
+                .map(|ped_assign| (ped_assign.var(), ped_assign))
         })
         .collect();
 
