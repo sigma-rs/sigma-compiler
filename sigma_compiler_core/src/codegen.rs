@@ -165,6 +165,11 @@ impl CodeGen {
         id
     }
 
+    /// Create a new identifier, using the unique prefix
+    pub fn gen_ident(&self, base: &Ident) -> Ident {
+        format_ident!("{}{}", self.unique_prefix, base)
+    }
+
     /// Append some code to the generated `prove` function
     pub fn prove_append(&mut self, code: TokenStream) {
         let prove_code = &self.prove_code;
@@ -194,16 +199,17 @@ impl CodeGen {
     }
 
     /// Append some code to both the generated `prove` and `verify`
-    /// functions
-    pub fn prove_verify_append(&mut self, code: TokenStream) {
+    /// functions, the latter to be run before the `sent_params` are
+    /// deserialized
+    pub fn prove_verify_pre_params_append(&mut self, code: TokenStream) {
         let prove_code = &self.prove_code;
         self.prove_code = quote! {
             #prove_code
             #code
         };
-        let verify_code = &self.verify_code;
-        self.verify_code = quote! {
-            #verify_code
+        let verify_pre_params_code = &self.verify_pre_params_code;
+        self.verify_pre_params_code = quote! {
+            #verify_pre_params_code
             #code
         };
     }
@@ -404,7 +410,7 @@ impl CodeGen {
 
                 let chunks = self.sent_params.fields.iter().map(|sf| match sf {
                     StructField::Point(id) => quote! {
-                        let #id = sigma_rs::serialization::deserialize_elements(
+                        let #id: Point = sigma_rs::serialization::deserialize_elements(
                                 &proof[#offset_var..],
                                 1,
                             ).ok_or(SigmaError::VerificationFailure)?[0];
@@ -455,8 +461,10 @@ impl CodeGen {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use sigma_compiler::group::Group;
+                use sigma_compiler::group::ff::{Field, PrimeField};
+                use sigma_compiler::group::ff::derive::subtle::ConditionallySelectable;
                 use sigma_compiler::rand::{CryptoRng, RngCore};
-                use sigma_compiler::group::ff::PrimeField;
                 use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
