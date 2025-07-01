@@ -2,6 +2,7 @@
 //! combined with `AND`, `OR`, and `THRESH`.
 
 use super::types::*;
+use quote::quote;
 use std::collections::HashMap;
 use syn::parse::Result;
 use syn::visit::Visit;
@@ -155,8 +156,8 @@ impl StatementTree {
         Ok(StatementTree::And(children?))
     }
 
-    /// Return a vector of references to all of the leaves in the
-    /// [`StatementTree`]
+    /// Return a vector of references to all of the leaf expressions in
+    /// the [`StatementTree`]
     pub fn leaves(&self) -> Vec<&Expr> {
         match self {
             StatementTree::Leaf(ref e) => vec![e],
@@ -169,8 +170,8 @@ impl StatementTree {
         }
     }
 
-    /// Return a vector of mutable references to all of the leaves in
-    /// the [`StatementTree`]
+    /// Return a vector of mutable references to all of the leaf
+    /// expressions in the [`StatementTree`]
     pub fn leaves_mut(&mut self) -> Vec<&mut Expr> {
         match self {
             StatementTree::Leaf(ref mut e) => vec![e],
@@ -180,6 +181,20 @@ impl StatementTree {
                     b
                 })
             }
+        }
+    }
+
+    /// Return a vector of mutable references to all of the leaves in
+    /// the [`StatementTree`]
+    pub fn leaves_st_mut(&mut self) -> Vec<&mut StatementTree> {
+        match self {
+            StatementTree::Leaf(_) => vec![self],
+            StatementTree::And(v) | StatementTree::Or(v) | StatementTree::Thresh(_, v) => v
+                .iter_mut()
+                .fold(Vec::<&mut StatementTree>::new(), |mut b, st| {
+                    b.extend(st.leaves_st_mut());
+                    b
+                }),
         }
     }
 
@@ -390,6 +405,38 @@ impl StatementTree {
                 *self = StatementTree::And(new_svec);
             }
         }
+    }
+
+    fn dump_int(&self, depth: usize) {
+        match self {
+            StatementTree::Leaf(e) => {
+                println!(
+                    "{:1$}{2}",
+                    "",
+                    depth * 2,
+                    quote! { #e }.to_string().replace('\n', " ")
+                )
+            }
+            StatementTree::And(v) => {
+                println!("{:1$}And (", "", depth * 2);
+                v.iter().for_each(|n| n.dump_int(depth + 1));
+                println!("{:1$})", "", depth * 2);
+            }
+            StatementTree::Or(v) => {
+                println!("{:1$}Or (", "", depth * 2);
+                v.iter().for_each(|n| n.dump_int(depth + 1));
+                println!("{:1$})", "", depth * 2);
+            }
+            StatementTree::Thresh(thresh, v) => {
+                println!("{:1$}Thresh ({2}", "", depth * 2, thresh);
+                v.iter().for_each(|n| n.dump_int(depth + 1));
+                println!("{:1$})", "", depth * 2);
+            }
+        }
+    }
+
+    pub fn dump(&self) {
+        self.dump_int(0);
     }
 }
 

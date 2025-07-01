@@ -285,10 +285,10 @@ pub fn transform(
     // A HashSet of the unique random Scalars in the macro input
     let mut randoms = unique_random_scalars(vars, st);
 
-    // Gather mutable references to all Exprs in the leaves of the
+    // Gather mutable references to all of the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
     // the StatementTree, but that's fine.
-    let mut leaves = st.leaves_mut();
+    let mut leaves = st.leaves_st_mut();
 
     // A list of the computationally independent (non-vector) Points in
     // the macro input.  There must be at least two of them in order to
@@ -316,21 +316,28 @@ pub fn transform(
     // variable to the parsed commitment.
     let pedersens: HashMap<Ident, PedersenAssignment> = leaves
         .iter()
-        .filter_map(|leafexpr| {
+        .filter_map(|leaf| {
             // See if we recognize this leaf expression as a
             // PedersenAssignment, and if so, make a pair mapping its
             // variable to the PedersenAssignment.  (The "collect()"
             // will turn the list of pairs into a HashMap.)
-            recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
-                .map(|ped_assign| (ped_assign.var(), ped_assign))
+            if let StatementTree::Leaf(leafexpr) = leaf {
+                recognize_pedersen_assignment(vars, &randoms, &vardict, leafexpr)
+                    .map(|ped_assign| (ped_assign.var(), ped_assign))
+            } else {
+                None
+            }
         })
         .collect();
 
     // Count how many range statements we've seen
     let mut range_stmt_index = 0usize;
 
-    for leafexpr in leaves.iter_mut() {
+    for leaf in leaves.iter_mut() {
         // For each leaf expression, see if it looks like a range statement
+        let StatementTree::Leaf(leafexpr) = leaf else {
+            continue;
+        };
         let Some(range_stmt) = parse(vars, &vardict, leafexpr) else {
             continue;
         };
@@ -388,6 +395,8 @@ pub fn transform(
                 let #rand_var = Scalar::random(rng);
                 let #ped_assign_expr;
             });
+
+            basic_statements.push(ped_assign_expr);
 
             ped_assign
         };
@@ -523,6 +532,12 @@ pub fn transform(
             true, // is_rand
             true, // is_vec
         );
+        let bitrandsq_var = codegen.gen_scalar(
+            vars,
+            &format_ident!("range{}_{}_bitrandsq", range_stmt_index, range_id),
+            true, // is_rand
+            true, // is_vec
+        );
         let firstbitcomm_var = codegen.gen_point(
             vars,
             &format_ident!("range{}_{}_firstbitC", range_stmt_index, range_id),
@@ -538,6 +553,12 @@ pub fn transform(
         let firstbitrand_var = codegen.gen_scalar(
             vars,
             &format_ident!("range{}_{}_firstbitrand", range_stmt_index, range_id),
+            true,  // is_rand
+            false, // is_vec
+        );
+        let firstbitrandsq_var = codegen.gen_scalar(
+            vars,
+            &format_ident!("range{}_{}_firstbitrandsq", range_stmt_index, range_id),
             true,  // is_rand
             false, // is_vec
         );
@@ -557,6 +578,15 @@ pub fn transform(
         });
         // The prover code
         codegen.prove_append(quote! {
+            // The main strategy is to prove that each commitment is to
+            // a bit (0 or 1), and we do this by showing that the
+            // committed value equals its own square.  That is, we show
+            // that C = b*A + r*B and also that C = b*C + s*B.  If both
+            // of those are true (and A and B are computationally
+            // independent), then C = b*(b*A + r*B) + s*B = b^2*A +
+            // (r*b+s)*B, so b=b^2 and r=r*b+s.  Therefore either b=0
+            // and s=r or b=1 and s=0.
+
             // Map the bit representation to a vector of Scalar(0) and
             // Scalar(1), but skip the first bit, as described above.
             let #bits_var: Vec<Scalar> =
@@ -569,10 +599,20 @@ pub fn transform(
                         *b,
                     ))
                     .collect();
-            // Choose randomizers for the commitments randomly
+            // Choose randomizers r for the commitments randomly
             let #bitrand_var: Vec<Scalar> =
                 (0..(#nbits_var-1))
                     .map(|_| Scalar::random(rng))
+                    .collect();
+            // The randomizers s for the commitments to the squares are
+            // chosen as above: s=r if b=0 and s=0 if b=1.
+            let #bitrandsq_var: Vec<Scalar> =
+                (0..(#nbits_var-1))
+                    .map(|i| Scalar::conditional_select(
+                        &#bitrand_var[i],
+                        &Scalar::ZERO,
+                        #bitrep_var[i+1],
+                    ))
                     .collect();
             // Compute the commitments
             let #bitcomm_var: Vec<Point> =
@@ -596,6 +636,12 @@ pub fn transform(
                 #firstbitrand_var -=
                     #bitrand_var[i] * #bitrep_scalars_var[i+1];
             }
+            // And the randomization for the first square is as above
+            let #firstbitrandsq_var = Scalar::conditional_select(
+                    &#firstbitrand_var,
+                    &Scalar::ZERO,
+                    #bitrep_var[0],
+                );
             // Compute the first bit commitment
             let #firstbitcomm_var =
                 #firstbit_var * #commit_generator +
@@ -610,6 +656,34 @@ pub fn transform(
                     #bitcomm_var[i] * #bitrep_scalars_var[i+1];
             }
         });
+
+        basic_statements.push(parse_quote! {
+            #bitcomm_var = #bits_var * #commit_generator
+                + #bitrand_var * #rand_generator
+        });
+        basic_statements.push(parse_quote! {
+            #bitcomm_var = #bits_var * #bitcomm_var
+                + #bitrandsq_var * #rand_generator
+        });
+        basic_statements.push(parse_quote! {
+            #firstbitcomm_var = #firstbit_var * #commit_generator
+                + #firstbitrand_var * #rand_generator
+        });
+        basic_statements.push(parse_quote! {
+            #firstbitcomm_var = #firstbit_var * #bitcomm_var
+                + #firstbitrandsq_var * #rand_generator
+        });
+
+        // Now replace the range statement with an And of the
+        // basic_statements
+        let range_st = StatementTree::And(
+            basic_statements
+                .into_iter()
+                .map(StatementTree::Leaf)
+                .collect(),
+        );
+
+        **leaf = range_st;
     }
 
     Ok(())
