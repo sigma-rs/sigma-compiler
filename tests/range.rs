@@ -30,6 +30,6 @@ fn range_test() -> Result<(), sigma_rs::errors::Error> {
     let params = proof::Params { C, D, a, A, B };
     let witness = proof::Witness { x, y, r };
 
-    let proof = proof::prove(&params, &witness, &mut rng)?;
-    proof::verify(&params, &proof)
+    let proof = proof::prove(&params, &witness, b"range_test", &mut rng)?;
+    proof::verify(&params, &proof, b"range_test")
 }

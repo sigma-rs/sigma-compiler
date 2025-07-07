@@ -32,6 +32,6 @@ fn pubscalars_test() -> Result<(), sigma_rs::errors::Error> {
     let params = proof::Params { C, D, A, B, a, b };
     let witness = proof::Witness { x, z, r, s };
 
-    let proof = proof::prove(&params, &witness, &mut rng)?;
-    proof::verify(&params, &proof)
+    let proof = proof::prove(&params, &witness, b"pubscalars_test", &mut rng)?;
+    proof::verify(&params, &proof, b"pubscalars_test")
 }

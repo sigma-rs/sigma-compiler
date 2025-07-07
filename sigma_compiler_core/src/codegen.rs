@@ -331,6 +331,7 @@ impl CodeGen {
             let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
             let codegen_witness_var = format_ident!("{}sigma_witness", self.unique_prefix);
             let proof_var = format_ident!("{}proof", self.unique_prefix);
+            let sid_var = format_ident!("{}session_id", self.unique_prefix);
             let sent_params_code = {
                 let chunks = self.sent_params.fields.iter().map(|sf| match sf {
                     StructField::Point(id) => quote! {
@@ -352,6 +353,7 @@ impl CodeGen {
                 pub fn prove(
                     params: &Params,
                     witness: &Witness,
+                    #sid_var: &[u8],
                     rng: &mut (impl CryptoRng + RngCore),
                 ) -> Result<Vec<u8>, SigmaError> {
                     #dumper
@@ -370,6 +372,7 @@ impl CodeGen {
                         sigma::prove(
                             &#codegen_params_var,
                             &#codegen_witness_var,
+                            #sid_var,
                             rng,
                         )?
                     );
@@ -398,6 +401,8 @@ impl CodeGen {
             let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
             let element_len_var = format_ident!("{}element_len", self.unique_prefix);
             let offset_var = format_ident!("{}proof_offset", self.unique_prefix);
+            let proof_var = format_ident!("{}proof", self.unique_prefix);
+            let sid_var = format_ident!("{}session_id", self.unique_prefix);
             let sent_params_code = {
                 let element_len_code = if self.sent_params.fields.is_empty() {
                     quote! {}
@@ -411,14 +416,14 @@ impl CodeGen {
                 let chunks = self.sent_params.fields.iter().map(|sf| match sf {
                     StructField::Point(id) => quote! {
                         let #id: Point = sigma_rs::serialization::deserialize_elements(
-                                &proof[#offset_var..],
+                                &#proof_var[#offset_var..],
                                 1,
                             ).ok_or(SigmaError::VerificationFailure)?[0];
                         #offset_var += #element_len_var;
                     },
                     StructField::VecPoint(id) => quote! {
                         #id = sigma_rs::serialization::deserialize_elements(
-                                &proof[#offset_var..],
+                                &#proof_var[#offset_var..],
                                 #id.len(),
                             ).ok_or(SigmaError::VerificationFailure)?;
                         #offset_var += #element_len_var * #id.len();
@@ -434,7 +439,11 @@ impl CodeGen {
             };
 
             quote! {
-                pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
+                pub fn verify(
+                    params: &Params,
+                    #proof_var: &[u8],
+                    #sid_var: &[u8],
+                ) -> Result<(), SigmaError> {
                     #dumper
                     let Params { #params_ids } = params.clone();
                     #verify_pre_params_code
@@ -443,7 +452,11 @@ impl CodeGen {
                     let #codegen_params_var = sigma::Params {
                         #sigma_rs_params_ids
                     };
-                    sigma::verify(&#codegen_params_var, &proof[#offset_var..])
+                    sigma::verify(
+                        &#codegen_params_var,
+                        &#proof_var[#offset_var..],
+                        #sid_var,
+                    )
                 }
             }
         } else {

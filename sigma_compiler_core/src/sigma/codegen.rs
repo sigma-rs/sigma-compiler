@@ -247,6 +247,7 @@ impl<'a> CodeGen<'a> {
                 pub fn prove(
                     params: &Params,
                     witness: &Witness,
+                    session_id: &[u8],
                     rng: &mut (impl CryptoRng + RngCore),
                 ) -> Result<Vec<u8>, SigmaError> {
                     #dumper
@@ -272,7 +273,11 @@ impl<'a> CodeGen<'a> {
             };
             let params_ids = pub_params_fields.field_list();
             quote! {
-                pub fn verify(params: &Params, proof: &[u8]) -> Result<(), SigmaError> {
+                pub fn verify(
+                    params: &Params,
+                    proof: &[u8],
+                    session_id: &[u8],
+                ) -> Result<(), SigmaError> {
                     #dumper
                     let Params { #params_ids } = params.clone();
                     Ok(())
