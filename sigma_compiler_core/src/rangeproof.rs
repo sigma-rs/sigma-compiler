@@ -529,14 +529,14 @@ pub fn transform(
         let bitrand_var = codegen.gen_scalar(
             vars,
             &format_ident!("range{}_{}_bitrand", range_stmt_index, range_id),
-            true, // is_rand
-            true, // is_vec
+            false, // is_rand is false because this value might get reused in bitrandsq
+            true,  // is_vec
         );
         let bitrandsq_var = codegen.gen_scalar(
             vars,
             &format_ident!("range{}_{}_bitrandsq", range_stmt_index, range_id),
-            true, // is_rand
-            true, // is_vec
+            false, // is_rand
+            true,  // is_vec
         );
         let firstbitcomm_var = codegen.gen_point(
             vars,
@@ -553,13 +553,13 @@ pub fn transform(
         let firstbitrand_var = codegen.gen_scalar(
             vars,
             &format_ident!("range{}_{}_firstbitrand", range_stmt_index, range_id),
-            true,  // is_rand
+            false, // is_rand
             false, // is_vec
         );
         let firstbitrandsq_var = codegen.gen_scalar(
             vars,
             &format_ident!("range{}_{}_firstbitrandsq", range_stmt_index, range_id),
-            true,  // is_rand
+            false, // is_rand
             false, // is_vec
         );
 
