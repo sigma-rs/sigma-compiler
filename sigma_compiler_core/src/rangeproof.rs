@@ -333,6 +333,9 @@ pub fn transform(
     // Count how many range statements we've seen
     let mut range_stmt_index = 0usize;
 
+    // The generated variable name for the rng
+    let rng_var = codegen.gen_ident(&format_ident!("rng"));
+
     for leaf in leaves.iter_mut() {
         // For each leaf expression, see if it looks like a range statement
         let StatementTree::Leaf(leafexpr) = leaf else {
@@ -392,7 +395,7 @@ pub fn transform(
                 recognize_pedersen_assignment(vars, &randoms, &vardict, &ped_assign_expr).unwrap();
 
             codegen.prove_append(quote! {
-                let #rand_var = Scalar::random(rng);
+                let #rand_var = Scalar::random(#rng_var);
                 let #ped_assign_expr;
             });
 
@@ -602,7 +605,7 @@ pub fn transform(
             // Choose randomizers r for the commitments randomly
             let #bitrand_var: Vec<Scalar> =
                 (0..(#nbits_var-1))
-                    .map(|_| Scalar::random(rng))
+                    .map(|_| Scalar::random(#rng_var))
                     .collect();
             // The randomizers s for the commitments to the squares are
             // chosen as above: s=r if b=0 and s=0 if b=1.

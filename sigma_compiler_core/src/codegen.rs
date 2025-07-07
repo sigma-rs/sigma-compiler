@@ -330,6 +330,9 @@ impl CodeGen {
             let prove_code = &self.prove_code;
             let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
             let codegen_witness_var = format_ident!("{}sigma_witness", self.unique_prefix);
+            let params_var = format_ident!("{}params", self.unique_prefix);
+            let witness_var = format_ident!("{}witness", self.unique_prefix);
+            let rng_var = format_ident!("{}rng", self.unique_prefix);
             let proof_var = format_ident!("{}proof", self.unique_prefix);
             let sid_var = format_ident!("{}session_id", self.unique_prefix);
             let sent_params_code = {
@@ -351,14 +354,14 @@ impl CodeGen {
 
             quote! {
                 pub fn prove(
-                    params: &Params,
-                    witness: &Witness,
+                    #params_var: &Params,
+                    #witness_var: &Witness,
                     #sid_var: &[u8],
-                    rng: &mut (impl CryptoRng + RngCore),
+                    #rng_var: &mut (impl CryptoRng + RngCore),
                 ) -> Result<Vec<u8>, SigmaError> {
                     #dumper
-                    let Params { #params_ids } = params.clone();
-                    let Witness { #witness_ids } = witness.clone();
+                    let Params { #params_ids } = #params_var.clone();
+                    let Witness { #witness_ids } = #witness_var.clone();
                     #prove_code
                     let mut #proof_var = Vec::<u8>::new();
                     let #codegen_params_var = sigma::Params {
@@ -373,7 +376,7 @@ impl CodeGen {
                             &#codegen_params_var,
                             &#codegen_witness_var,
                             #sid_var,
-                            rng,
+                            #rng_var,
                         )?
                     );
                     Ok(#proof_var)
@@ -401,6 +404,7 @@ impl CodeGen {
             let codegen_params_var = format_ident!("{}sigma_params", self.unique_prefix);
             let element_len_var = format_ident!("{}element_len", self.unique_prefix);
             let offset_var = format_ident!("{}proof_offset", self.unique_prefix);
+            let params_var = format_ident!("{}params", self.unique_prefix);
             let proof_var = format_ident!("{}proof", self.unique_prefix);
             let sid_var = format_ident!("{}session_id", self.unique_prefix);
             let sent_params_code = {
@@ -440,12 +444,12 @@ impl CodeGen {
 
             quote! {
                 pub fn verify(
-                    params: &Params,
+                    #params_var: &Params,
                     #proof_var: &[u8],
                     #sid_var: &[u8],
                 ) -> Result<(), SigmaError> {
                     #dumper
-                    let Params { #params_ids } = params.clone();
+                    let Params { #params_ids } = #params_var.clone();
                     #verify_pre_params_code
                     #sent_params_code
                     #verify_code
