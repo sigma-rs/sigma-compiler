@@ -56,7 +56,5 @@ pub fn sigma_compiler_core(
     });
     */
 
-    spec.statements.dump();
-
     codegen.generate(spec, emit_prover, emit_verifier)
 }

@@ -411,7 +411,7 @@ impl StatementTree {
         match self {
             StatementTree::Leaf(e) => {
                 println!(
-                    "{:1$}{2}",
+                    "{:1$}{2},",
                     "",
                     depth * 2,
                     quote! { #e }.to_string().replace('\n', " ")

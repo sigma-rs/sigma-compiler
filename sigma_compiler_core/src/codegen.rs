@@ -220,7 +220,7 @@ impl CodeGen {
     /// [`sigma_compiler_core`](super::sigma_compiler_core).
     pub fn generate(
         &self,
-        spec: &SigmaCompSpec,
+        spec: &mut SigmaCompSpec,
         emit_prover: bool,
         emit_verifier: bool,
     ) -> TokenStream {
@@ -243,11 +243,11 @@ impl CodeGen {
         let sigma_rs_vardict = taggedvardict_to_vardict(&spec.vars);
 
         // Generate the code that uses the underlying sigma_rs API
-        let sigma_rs_codegen = super::sigma::codegen::CodeGen::new(
+        let mut sigma_rs_codegen = super::sigma::codegen::CodeGen::new(
             format_ident!("sigma"),
             format_ident!("Point"),
             &sigma_rs_vardict,
-            &spec.statements,
+            &mut spec.statements,
         );
         let sigma_rs_code = sigma_rs_codegen.generate(emit_prover, emit_verifier);
 

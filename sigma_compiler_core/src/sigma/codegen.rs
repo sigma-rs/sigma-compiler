@@ -139,7 +139,7 @@ pub struct CodeGen<'a> {
     proto_name: Ident,
     group_name: Ident,
     vars: &'a VarDict,
-    statements: &'a StatementTree,
+    statements: &'a mut StatementTree,
 }
 
 impl<'a> CodeGen<'a> {
@@ -147,7 +147,7 @@ impl<'a> CodeGen<'a> {
         proto_name: Ident,
         group_name: Ident,
         vars: &'a VarDict,
-        statements: &'a StatementTree,
+        statements: &'a mut StatementTree,
     ) -> Self {
         Self {
             proto_name,
@@ -162,7 +162,7 @@ impl<'a> CodeGen<'a> {
     ///
     /// `emit_prover` and `emit_verifier` are as in
     /// [`sigma_compiler_core`](super::super::sigma_compiler_core).
-    pub fn generate(&self, emit_prover: bool, emit_verifier: bool) -> TokenStream {
+    pub fn generate(&mut self, emit_prover: bool, emit_verifier: bool) -> TokenStream {
         let proto_name = &self.proto_name;
         let group_name = &self.group_name;
 
@@ -171,6 +171,13 @@ impl<'a> CodeGen<'a> {
             pub type Scalar = <super::#group_name as group::Group>::Scalar;
             pub type Point = super::#group_name;
         };
+
+        // Flatten nested "And"s into single "And"s
+        self.statements.flatten_ands();
+
+        println!("Statements = {{");
+        self.statements.dump();
+        println!("}}");
 
         let mut pub_params_fields = StructFieldList::default();
         pub_params_fields.push_vars(self.vars, true);
