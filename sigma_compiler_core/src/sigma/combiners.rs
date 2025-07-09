@@ -6,7 +6,7 @@ use quote::quote;
 use std::collections::HashMap;
 use syn::parse::Result;
 use syn::visit::Visit;
-use syn::Expr;
+use syn::{parse_quote, Expr};
 
 /// For each [`Ident`](struct@syn::Ident) representing a private
 /// `Scalar` (as listed in a [`VarDict`]) that appears in an [`Expr`],
@@ -407,6 +407,21 @@ impl StatementTree {
         }
     }
 
+    /// Produce a [`StatementTree`] that represents the constant `true`
+    pub fn leaf_true() -> StatementTree {
+        StatementTree::Leaf(parse_quote! { true })
+    }
+
+    /// Test if the given [`StatementTree`] represents the constant `true`
+    pub fn is_leaf_true(&self) -> bool {
+        if let StatementTree::Leaf(Expr::Lit(exprlit)) = self {
+            if let syn::Lit::Bool(syn::LitBool { value: true, .. }) = exprlit.lit {
+                return true;
+            }
+        }
+        false
+    }
+
     fn dump_int(&self, depth: usize) {
         match self {
             StatementTree::Leaf(e) => {
@@ -445,7 +460,18 @@ mod test {
     use super::StatementTree::*;
     use super::*;
     use quote::quote;
-    use syn::parse_quote;
+
+    #[test]
+    fn leaf_true_test() {
+        assert!(StatementTree::leaf_true().is_leaf_true());
+        assert!(!StatementTree::Leaf(parse_quote! { false }).is_leaf_true());
+        assert!(!StatementTree::Leaf(parse_quote! { 1 }).is_leaf_true());
+        assert!(!StatementTree::parse(&parse_quote! {
+            OR(1=1, a=b)
+        })
+        .unwrap()
+        .is_leaf_true());
+    }
 
     #[test]
     fn combiners_simple_test() {
