@@ -673,7 +673,7 @@ pub fn transform(
                 + #firstbitrand_var * #rand_generator
         });
         basic_statements.push(parse_quote! {
-            #firstbitcomm_var = #firstbit_var * #bitcomm_var
+            #firstbitcomm_var = #firstbit_var * #firstbitcomm_var
                 + #firstbitrandsq_var * #rand_generator
         });
 
