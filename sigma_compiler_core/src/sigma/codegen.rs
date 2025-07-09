@@ -419,14 +419,15 @@ impl<'a> CodeGen<'a> {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use sigma_compiler::sigma_rs;
                 use sigma_rs::{
                     codec::ShakeCodec,
                     composition::{Protocol, ProtocolWitness},
+                    errors::Error as SigmaError,
                     LinearRelation, NISigmaProtocol,
                 };
                 use sigma_compiler::rand::{CryptoRng, RngCore};
                 use sigma_compiler::group::ff::PrimeField;
-                use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
                 #group_types

@@ -482,6 +482,7 @@ impl CodeGen {
                 use sigma_compiler::group::ff::{Field, PrimeField};
                 use sigma_compiler::group::ff::derive::subtle::ConditionallySelectable;
                 use sigma_compiler::rand::{CryptoRng, RngCore};
+                use sigma_compiler::sigma_rs;
                 use sigma_compiler::sigma_rs::errors::Error as SigmaError;
                 #dump_use
 
