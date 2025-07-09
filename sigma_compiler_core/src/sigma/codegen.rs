@@ -184,26 +184,18 @@ impl<'a> CodeGen<'a> {
     /// Generate the code for the `protocol` and `protocol_witness`
     /// functions that create the `Protocol` and `ProtocolWitness`
     /// structs, respectively, given a [`VarDict`] and a
-    /// [`StatementTree`] describing the statements to be proven.
-    /// `node_num` is a sequentially increasing counter for nodes in the
-    /// `Protocol` tree.  The function returns the next `node_num` to
-    /// use as the first component of its output.  The other components
-    /// are the code for the `protocol` and `protocol_witness`
-    /// functions, respectively.
-    fn proto_witness_codegen(
-        &self,
-        node_num: usize,
-        statement: &StatementTree,
-    ) -> (usize, TokenStream, TokenStream) {
-        let proto_var = format_ident!("{}proto_{}", self.unique_prefix, node_num,);
-        let proto_witness_var = format_ident!("{}proto_witness_{}", self.unique_prefix, node_num,);
+    /// [`StatementTree`] describing the statements to be proven.  The
+    /// output components are the code for the `protocol` and
+    /// `protocol_witness` functions, respectively.  The `protocol` code
+    /// must evaluate to a `Result<Protocol>` and the `protocol_witness`
+    /// code must evaluate to a `Result<ProtocolWitness>`.
+    fn proto_witness_codegen(&self, statement: &StatementTree) -> (TokenStream, TokenStream) {
         (
-            0,
             quote! {
-                let #proto_var = Protocol::from(LinearRelation::<Point>::new());
+                Ok(Protocol::from(LinearRelation::<Point>::new()))
             },
             quote! {
-                let #proto_witness_var = ProtocolWitness::Simple(vec![]);
+                Ok(ProtocolWitness::Simple(vec![]))
             },
         )
     }
@@ -287,13 +279,12 @@ impl<'a> CodeGen<'a> {
             quote! {}
         };
 
-        let (_, protocol_code, witness_code) = self.proto_witness_codegen(0, self.statements);
+        let (protocol_code, witness_code) = self.proto_witness_codegen(self.statements);
 
         // Generate the function that creates the sigma-rs Protocol
         let protocol_func = {
             let params_ids = pub_params_fields.field_list();
             let params_var = format_ident!("{}params", self.unique_prefix);
-            let proto_var = format_ident!("{}proto_0", self.unique_prefix);
 
             quote! {
                 fn protocol(
@@ -301,7 +292,6 @@ impl<'a> CodeGen<'a> {
                 ) -> Result<Protocol<Point>, SigmaError> {
                     let Params { #params_ids } = #params_var.clone();
                     #protocol_code
-                    Ok(#proto_var)
                 }
             }
         };
@@ -312,7 +302,6 @@ impl<'a> CodeGen<'a> {
             let witness_ids = witness_fields.field_list();
             let params_var = format_ident!("{}params", self.unique_prefix);
             let witness_var = format_ident!("{}witness", self.unique_prefix);
-            let proto_witness_var = format_ident!("{}proto_witness_0", self.unique_prefix);
 
             quote! {
                 fn protocol_witness(
@@ -322,7 +311,6 @@ impl<'a> CodeGen<'a> {
                     let Params { #params_ids } = #params_var.clone();
                     let Witness { #witness_ids } = #witness_var.clone();
                     #witness_code
-                    Ok(#proto_witness_var)
                 }
             }
         };
