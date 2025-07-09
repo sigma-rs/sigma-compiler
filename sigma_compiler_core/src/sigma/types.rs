@@ -613,13 +613,15 @@ pub fn expr_type(vars: &VarDict, expr: &Expr) -> Result<AExprType> {
     Ok(fold.fold(vars, expr)?.0)
 }
 
-pub struct AExprTokenFold;
+pub struct AExprTokenFold<'a> {
+    ident_closure: &'a mut dyn FnMut(&Ident, AExprType) -> Result<TokenStream>,
+}
 
-impl AExprFold<TokenStream> for AExprTokenFold {
+impl<'a> AExprFold<TokenStream> for AExprTokenFold<'a> {
     /// Called when an identifier found in the [`VarDict`] is
     /// encountered in the [`Expr`]
-    fn ident(&mut self, id: &Ident, _restype: AExprType) -> Result<TokenStream> {
-        Ok(quote! { #id })
+    fn ident(&mut self, id: &Ident, restype: AExprType) -> Result<TokenStream> {
+        (self.ident_closure)(id, restype)
     }
 
     /// Called when the arithmetic expression evaluates to a constant
@@ -733,7 +735,20 @@ impl AExprFold<TokenStream> for AExprTokenFold {
 ///     variables
 ///   - parens
 pub fn expr_type_tokens(vars: &VarDict, expr: &Expr) -> Result<(AExprType, TokenStream)> {
-    let mut fold = AExprTokenFold {};
+    let mut fold = AExprTokenFold {
+        ident_closure: &mut |id, _var_type| Ok(quote! { #id }),
+    };
+    fold.fold(vars, expr)
+}
+
+/// Like [`expr_type_tokens`], but call a custom closure on encountering
+/// each [`struct@Ident`].
+pub fn expr_type_tokens_id_closure(
+    vars: &VarDict,
+    expr: &Expr,
+    ident_closure: &mut dyn FnMut(&Ident, AExprType) -> Result<TokenStream>,
+) -> Result<(AExprType, TokenStream)> {
+    let mut fold = AExprTokenFold { ident_closure };
     fold.fold(vars, expr)
 }
 
