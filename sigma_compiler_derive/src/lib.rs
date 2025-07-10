@@ -112,6 +112,16 @@ use syn::parse_macro_input;
 ///        directly, or after other substitutions.  For example, the
 ///        statement `a = a + b` is not allowed, nor is the combination
 ///        of substitutions `a = b + 1, b = c + 2, c = 2*a`.
+///      - `a = arith_expr`, where `a` is a variable representing a
+///        public `Scalar`.  This is a _public Scalar equality
+///        statement_.  Its meaning is to say that the public `Scalar`
+///        `a` has the value given by the arithmetic expression, which
+///        must evaluate to a public `Scalar`.  The statement is simply
+///        removed from the list of statements to be proven in the
+///        zero-knowledge sigma protocol, and code is emitted for the
+///        prover and verifier to each just check that the statement is
+///        satisfied.  Currently, there can be no vector variables in
+///        this kind of statement.
 ///      - `(a..b).contains(x)`, where `a` and `b` are _public_
 ///        `Scalar`s (or arithmetic expressions evaluating to public
 ///        `Scalar`s), and `x` is a private `Scalar`, possibly

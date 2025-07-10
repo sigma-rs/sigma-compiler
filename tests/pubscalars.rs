@@ -8,13 +8,13 @@ use sigma_compiler::*;
 #[test]
 fn pubscalars_test() -> Result<(), sigma_rs::errors::Error> {
     sigma_compiler! { proof,
-            (x, z, rand r, rand s, pub a, pub b),
-            (C, D, const cind A, const cind B),
-            C = x*A + r*B,
-            D = z*A + s*B,
-            z = 2*x + a,
-    //        b = 2*a - 3,
-        }
+        (x, z, rand r, rand s, pub a, pub b),
+        (C, D, const cind A, const cind B),
+        C = x*A + r*B,
+        D = z*A + s*B,
+        z = 2*x + a,
+        b = 2*a - 3,
+    }
 
     type Scalar = <G as Group>::Scalar;
     let mut rng = rand::thread_rng();
