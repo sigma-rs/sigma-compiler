@@ -42,19 +42,5 @@ pub fn sigma_compiler_core(
     // Apply any range statement transformations
     rangeproof::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
 
-    /* Just some test code for now:
-    let C_var = codegen.gen_point(&mut spec.vars, &quote::format_ident!("C"), false, true);
-    let V_var = codegen.gen_point(&mut spec.vars, &quote::format_ident!("V"), true, true);
-    codegen.prove_append(quote::quote! {
-        let #C_var = <Point as group::Group>::generator();
-        let #V_var = vec![<Point as group::Group>::generator(), <Point as
-        group::Group>::generator()];
-    });
-    codegen.verify_pre_params_append(quote::quote! {
-        let mut #V_var = Vec::<Point>::new();
-        #V_var.resize(2, Point::default());
-    });
-    */
-
     codegen.generate(spec, emit_prover, emit_verifier)
 }
