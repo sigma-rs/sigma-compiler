@@ -995,7 +995,7 @@ mod tests {
             (Scalar::from_u128(12u128) + a) * A; },
             quote! { let out_rand = Scalar::from_u128(2u128) *
             <Scalar as Field>::invert(&Scalar::from_u128(3u128).neg()).unwrap() *
-            (Scalar::from_u128(2u128) * r); },
+            (r * Scalar::from_u128(2u128)); },
         );
 
         convert_commitment_randomness_tester(
@@ -1009,7 +1009,7 @@ mod tests {
             (Scalar::from_u128(12u128) + a) * A; },
             quote! { let out_rand = Scalar::from_u128(2u128) *
             <Scalar as Field>::invert(&Scalar::from_u128(3u128).neg()).unwrap() *
-            (Scalar::from_u128(2u128) * r +
+            (r * Scalar::from_u128(2u128) +
             (c + (Scalar::from_u128(3u128).neg()))); },
         );
     }

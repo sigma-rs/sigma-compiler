@@ -12,7 +12,7 @@ fn pubscalars_test() -> Result<(), sigma_rs::errors::Error> {
             (C, D, const cind A, const cind B),
             C = x*A + r*B,
             D = z*A + s*B,
-            z = x*2 + a,
+            z = 2*x + a,
     //        b = 2*a - 3,
         }
 

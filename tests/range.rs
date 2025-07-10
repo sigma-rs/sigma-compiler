@@ -10,7 +10,7 @@ fn range_test() -> Result<(), sigma_rs::errors::Error> {
     sigma_compiler! { proof,
         (x, y, pub a, rand r),
         (C, D, const cind A, const cind B),
-        C = (x*3+1)*A + (r*2+3)*B,
+        C = (3*x+1)*A + (2*r+3)*B,
         D = x*A + y*B,
         (a..20).contains(x),
         (0..a).contains(y),

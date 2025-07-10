@@ -484,6 +484,7 @@ impl CodeGen {
                 use sigma_compiler::rand::{CryptoRng, RngCore};
                 use sigma_compiler::sigma_rs;
                 use sigma_compiler::sigma_rs::errors::Error as SigmaError;
+                use std::ops::Neg;
                 #dump_use
 
                 #group_types

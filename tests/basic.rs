@@ -12,7 +12,7 @@ fn basic_test() -> Result<(), sigma_rs::errors::Error> {
         (C, D, const cind A, const cind B),
         C = x*A + r*B,
         D = z*A + s*B,
-        z = x*2 + 1,
+        z = 2*x + 1,
     }
 
     type Scalar = <G as Group>::Scalar;

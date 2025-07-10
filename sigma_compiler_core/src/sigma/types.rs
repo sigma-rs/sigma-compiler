@@ -705,7 +705,15 @@ impl<'a> AExprFold<TokenStream> for AExprTokenFold<'a> {
     ) -> Result<TokenStream> {
         let le = larg.1;
         let re = rarg.1;
-        Ok(quote! { #le * #re })
+        // If one is public and one is private, put the private one on
+        // the left
+        if matches!(larg.0, AExprType::Scalar { is_pub: true, .. })
+            && matches!(rarg.0, AExprType::Scalar { is_pub: false, .. })
+        {
+            Ok(quote! { #re * #le })
+        } else {
+            Ok(quote! { #le * #re })
+        }
     }
 
     /// Called when multiplying a `Scalar` and a `Point` (the `Scalar`
@@ -718,7 +726,12 @@ impl<'a> AExprFold<TokenStream> for AExprTokenFold<'a> {
     ) -> Result<TokenStream> {
         let se = sarg.1;
         let pe = parg.1;
-        Ok(quote! { #se * #pe })
+        // If the Scalar is public, put it on the right
+        if matches!(sarg.0, AExprType::Scalar { is_pub: true, .. }) {
+            Ok(quote! { #pe * #se })
+        } else {
+            Ok(quote! { #se * #pe })
+        }
     }
 }
 
@@ -846,13 +859,13 @@ mod tests {
             &vars,
             parse_quote! {(a-(2-3))*(A+(3*4)*A)},
             quote! {
-            (a-(Scalar::from_u128(1u128).neg()))*(A+(Scalar::from_u128(12u128))*A) },
+            (a-(Scalar::from_u128(1u128).neg()))*(A+A*(Scalar::from_u128(12u128))) },
         );
         check_tokens(
             &vars,
             parse_quote! {(a-(2-3))*(A+A*(3*4))},
             quote! {
-            (a-(Scalar::from_u128(1u128).neg()))*(A+(Scalar::from_u128(12u128))*A) },
+            (a-(Scalar::from_u128(1u128).neg()))*(A+A*(Scalar::from_u128(12u128))) },
         );
 
         // Tests that should fail
