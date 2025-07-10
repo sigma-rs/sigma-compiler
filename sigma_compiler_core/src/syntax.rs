@@ -183,10 +183,10 @@ pub struct SigmaCompSpec {
     pub proto_name: Ident,
 
     /// An identifier for the mathematical
-    /// [`PrimeGroup`](https://docs.rs/group/latest/group/prime/trait.PrimeGroup.html)
+    /// [`PrimeGroup`](https://docs.rs/group/0.13.0/group/prime/trait.PrimeGroup.html)
     /// being used (if none is specified, it is assumed there is a
     /// default type called `G` in scope that implements the
-    /// [`PrimeGroup`](https://docs.rs/group/latest/group/prime/trait.PrimeGroup.html)
+    /// [`PrimeGroup`](https://docs.rs/group/0.13.0/group/prime/trait.PrimeGroup.html)
     /// trait)
     pub group_name: Ident,
 

@@ -1,5 +1,5 @@
 //! A module containing some utility functions useful for the runtime
-//! processing of range proofs.
+//! processing of range statements.
 
 use group::ff::PrimeField;
 use sigma_rs::errors::Error;
