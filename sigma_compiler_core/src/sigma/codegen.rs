@@ -618,7 +618,7 @@ impl<'a> CodeGen<'a> {
         };
 
         // Generate the function that creates the sigma-rs ProtocolWitness
-        let witness_func = {
+        let witness_func = if emit_prover {
             quote! {
                 fn protocol_witness(
                     params: &Params,
@@ -627,6 +627,8 @@ impl<'a> CodeGen<'a> {
                     #witness_code
                 }
             }
+        } else {
+            quote! {}
         };
 
         // Generate the prove function
