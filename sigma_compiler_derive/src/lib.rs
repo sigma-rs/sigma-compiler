@@ -24,7 +24,7 @@ use syn::parse_macro_input;
 ///   - `<Grp>`: an optional indication of the mathematical group to use
 ///     (a set of `Point`s and associated `Scalar`s) for this sigma
 ///     protocol.  The group must implement the
-///     [`PrimeGroup`](https://docs.rs/group/0.13.0/group/prime/trait.PrimeGroup.html)
+///     [`PrimeGroup`]
 ///     trait.  If `<Grp>` is omitted, it defaults to assuming there is
 ///     a group called `G` in the current scope.
 ///   - `scalar_list` is a list of variables representing `Scalar`s.
@@ -135,6 +135,52 @@ use syn::parse_macro_input;
 ///        If you want to include both endpoints, you can also use the
 ///        usual Rust notation `a..=b`.  The size of the range must fit
 ///        in an [`i128`].
+///
+/// The macro creates a submodule with the name specified by
+/// `proto_name`.  This module contains:
+///   - A struct `Instance` containing all the `Point`s and _public_
+///     `Scalar`s specified in the macro invocation.
+///   - A struct `Witness` containing all the _private_ `Scalar`s
+///     specified in the macro invocation.
+///   - A function `prove` with the signature
+///     ```
+///     pub fn prove(
+///         instance: &Instance,
+///         witness: &Witness,
+///         session_id: &[u8],
+///         rng: &mut (impl CryptoRng + RngCore),
+///     ) -> Result<Vec<u8>, sigma_rs::errors::Error>
+///     ```
+///     The parameter `instance` contains the public variables (also
+///     known to the verifier).  The parameter `witness` contains the
+///     private variables known only to the prover.  The parameter
+///     `session_id` can be any byte slice; the proof is bound to this
+///     byte slice, and the verifier must use the same byte slice in
+///     order to verify the proof.  The parameter `rng` is a random
+///     number generator that implements the [`CryptoRng`] and
+///     [`RngCore`] traits.  The output, if successful, is the proof as
+///     a byte vector.
+///   - A function `verify` with the signature
+///     ```
+///     pub fn verify(
+///         instance: &Instance,
+///         proof: &[u8],
+///         session_id: &[u8],
+///     ) -> Result<(), sigma_rs::errors::Error>
+///     ```
+///     The parameter `instance` contains the public variables, and must
+///     be the same as passed to the `prove` function.  The parameter
+///     `proof` contains the output of the `prove` function.  The
+///     parameter `session_id` must be the same as passed to the `prove`
+///     function.  If `verify` returns `Ok(())`, then the verifier can
+///     assume that the prover did know a `Witness` struct for which the
+///     statements (with public values specified by the given
+///     `Instance` struct) are all true, but the verifier does not learn
+///     any other information about that `Witness` struct.
+///
+///  [`PrimeGroup`]: https://docs.rs/group/0.13.0/group/prime/trait.PrimeGroup.html
+///  [`CryptoRng`]: https://docs.rs/rand/0.8.5/rand/trait.CryptoRng.html
+///  [`RngCore`]: https://docs.rs/rand/0.8.5/rand/trait.RngCore.html
 
 #[proc_macro]
 pub fn sigma_compiler(input: TokenStream) -> TokenStream {
