@@ -46,11 +46,20 @@ pub fn transform(
             if let Expr::Path(syn::ExprPath { path, .. }) = left.as_ref() {
                 if let Some(id) = path.get_ident() {
                     let idstr = id.to_string();
-                    if let Some(TaggedIdent::Scalar(TaggedScalar { is_pub: true, .. })) =
-                        vars.get(&idstr)
+                    if let Some(TaggedIdent::Scalar(TaggedScalar {
+                        is_pub: true,
+                        is_vec: false,
+                        ..
+                    })) = vars.get(&idstr)
                     {
-                        if let (AExprType::Scalar { is_pub: true, .. }, right_tokens) =
-                            expr_type_tokens(&vardict, right)?
+                        if let (
+                            AExprType::Scalar {
+                                is_pub: true,
+                                is_vec: false,
+                                ..
+                            },
+                            right_tokens,
+                        ) = expr_type_tokens(&vardict, right)?
                         {
                             // We found a public Scalar equality
                             // statement.  Add code to both the prover
