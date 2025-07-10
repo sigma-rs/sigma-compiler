@@ -139,9 +139,12 @@ use syn::parse_macro_input;
 /// The macro creates a submodule with the name specified by
 /// `proto_name`.  This module contains:
 ///   - A struct `Instance` containing all the `Point`s and _public_
-///     `Scalar`s specified in the macro invocation.
+///     `Scalar`s specified in the macro invocation.  Any public vector
+///     `Scalar` or `Point` variable will be represented as a
+///     `Vec<Scalar>` or `Vec<Point>` respectively.
 ///   - A struct `Witness` containing all the _private_ `Scalar`s
-///     specified in the macro invocation.
+///     specified in the macro invocation. Any private vector variable
+///     will be represented as a `Vec<Scalar>`.
 ///   - A function `prove` with the signature
 ///     ```
 ///     pub fn prove(
