@@ -26,9 +26,9 @@ fn basic_test() -> Result<(), sigma_rs::errors::Error> {
     let C = x * A + r * B;
     let D = z * A + s * B;
 
-    let params = proof::Params { C, D, A, B };
+    let instance = proof::Instance { C, D, A, B };
     let witness = proof::Witness { x, z, r, s };
 
-    let proof = proof::prove(&params, &witness, b"basic_test", &mut rng)?;
-    proof::verify(&params, &proof, b"basic_test")
+    let proof = proof::prove(&instance, &witness, b"basic_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"basic_test")
 }

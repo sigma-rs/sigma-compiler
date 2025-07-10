@@ -23,7 +23,7 @@
 //! containing the substitution statements themselves will be turned
 //! into the constant `true` and then pruned using
 //! [`prune_statement_tree`].  The [`CodeGen`] will be used to generate
-//! tests in the generated `prove` function that the `Params` and
+//! tests in the generated `prove` function that the `Instance` and
 //! `Witness` supplied to it do in fact satisfy the statements being
 //! substituted.
 //!

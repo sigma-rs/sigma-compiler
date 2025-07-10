@@ -481,7 +481,7 @@ pub fn transform(
             range_id
         ));
 
-        codegen.prove_verify_pre_params_append(quote! {
+        codegen.prove_verify_pre_instance_append(quote! {
             let #upper_var = #upper_code;
             let #bitrep_scalars_var =
                 sigma_compiler::rangeutils::bitrep_scalars_vartime(#upper_var)?;
@@ -575,7 +575,7 @@ pub fn transform(
         let commit_generator = &ped_assign.pedersen.var_term.id;
         let rand_generator = &ped_assign.pedersen.rand_term.id;
 
-        codegen.verify_pre_params_append(quote! {
+        codegen.verify_pre_instance_append(quote! {
             let mut #bitcomm_var = Vec::<Point>::new();
             #bitcomm_var.resize(#nbits_var - 1, Point::default());
         });

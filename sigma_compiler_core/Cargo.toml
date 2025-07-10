@@ -9,7 +9,7 @@ quote = "1.0"
 proc-macro2 = "1.0"
 
 [features]
-# Dump (to stdout) the public params on both the prover's and verifier's
-# side.  They should match.
+# Dump (to stdout) the value of the instance on both the prover's and
+# verifier's side.  They should match.
 dump = []
 # default = ["dump"]

@@ -37,11 +37,11 @@ impl StructFieldList {
     pub fn push_vecpoint(&mut self, s: &Ident) {
         self.fields.push(StructField::VecPoint(s.clone()));
     }
-    pub fn push_vars(&mut self, vars: &VarDict, for_params: bool) {
+    pub fn push_vars(&mut self, vars: &VarDict, for_instance: bool) {
         for (id, ti) in vars.iter() {
             match ti {
                 AExprType::Scalar { is_pub, is_vec, .. } => {
-                    if *is_pub == for_params {
+                    if *is_pub == for_instance {
                         if *is_vec {
                             self.push_vecscalar(&format_ident!("{}", id))
                         } else {
@@ -50,7 +50,7 @@ impl StructFieldList {
                     }
                 }
                 AExprType::Point { is_vec, .. } => {
-                    if for_params {
+                    if for_instance {
                         if *is_vec {
                             self.push_vecpoint(&format_ident!("{}", id))
                         } else {
@@ -67,28 +67,28 @@ impl StructFieldList {
         let dump_chunks = self.fields.iter().map(|f| match f {
             StructField::Scalar(id) => quote! {
                 print!("  {}: ", stringify!(#id));
-                Params::dump_scalar(&self.#id);
+                Instance::dump_scalar(&self.#id);
                 println!("");
             },
             StructField::VecScalar(id) => quote! {
                 print!("  {}: [", stringify!(#id));
                 for s in self.#id.iter() {
                     print!("    ");
-                    Params::dump_scalar(s);
+                    Instance::dump_scalar(s);
                     println!(",");
                 }
                 println!("  ]");
             },
             StructField::Point(id) => quote! {
                 print!("  {}: ", stringify!(#id));
-                Params::dump_point(&self.#id);
+                Instance::dump_point(&self.#id);
                 println!("");
             },
             StructField::VecPoint(id) => quote! {
                 print!("  {}: [", stringify!(#id));
                 for p in self.#id.iter() {
                     print!("    ");
-                    Params::dump_point(p);
+                    Instance::dump_point(p);
                     println!(",");
                 }
                 println!("  ]");
@@ -189,7 +189,7 @@ impl<'a> CodeGen<'a> {
     /// must evaluate to a `Result<Protocol>` and the `protocol_witness`
     /// code must evaluate to a `Result<ProtocolWitness>`.
     fn linear_relation_codegen(&self, exprs: &[&Expr]) -> (TokenStream, TokenStream) {
-        let params_var = format_ident!("{}params", self.unique_prefix);
+        let instance_var = format_ident!("{}instance", self.unique_prefix);
         let lr_var = format_ident!("{}lr", self.unique_prefix);
         let mut allocated_vars: HashSet<Ident> = HashSet::new();
         let mut param_vec_code = quote! {};
@@ -260,7 +260,7 @@ impl<'a> CodeGen<'a> {
                         is_vec: false,
                         is_pub: true,
                         ..
-                    } => Ok(quote! {#params_var.#id}),
+                    } => Ok(quote! {#instance_var.#id}),
                     AExprType::Scalar {
                         is_vec: true,
                         is_pub: false,
@@ -287,7 +287,7 @@ impl<'a> CodeGen<'a> {
                         ..
                     } => {
                         vec_param_vars.insert(id.clone());
-                        Ok(quote! {#params_var.#id[#vec_index_var]})
+                        Ok(quote! {#instance_var.#id[#vec_index_var]})
                     }
                     AExprType::Point { is_vec: false, .. } => {
                         if allocated_vars.insert(id.clone()) {
@@ -297,7 +297,7 @@ impl<'a> CodeGen<'a> {
                             };
                             element_assigns = quote! {
                                 #element_assigns
-                                #lr_var.set_element(#id, #params_var.#id);
+                                #lr_var.set_element(#id, #instance_var.#id);
                             };
                         }
                         Ok(quote! {#id})
@@ -316,7 +316,7 @@ impl<'a> CodeGen<'a> {
                                 for #vec_index_var in 0..#vec_len_var {
                                     #lr_var.set_element(
                                         #id[#vec_index_var],
-                                        #params_var.#id[#vec_index_var],
+                                        #instance_var.#id[#vec_index_var],
                                     );
                                 }
                             };
@@ -347,14 +347,14 @@ impl<'a> CodeGen<'a> {
                 let firstvar = &vec_param_varvec[0];
                 param_vec_code = quote! {
                     #param_vec_code
-                    let #vec_len_var = #params_var.#firstvar.len();
+                    let #vec_len_var = #instance_var.#firstvar.len();
                 };
                 for thisvar in vec_param_varvec.iter().skip(1) {
                     param_vec_code = quote! {
                         #param_vec_code
-                        if #vec_len_var != #params_var.#thisvar.len() {
+                        if #vec_len_var != #instance_var.#thisvar.len() {
                             eprintln!(
-                                "Params {} and {} must have the same length",
+                                "Instance variables {} and {} must have the same length",
                                 stringify!(#firstvar),
                                 stringify!(#thisvar),
                             );
@@ -365,7 +365,7 @@ impl<'a> CodeGen<'a> {
                 if !vec_witness_varvec.is_empty() {
                     witness_vec_code = quote! {
                         #witness_vec_code
-                        let #vec_len_var = params.#firstvar.len();
+                        let #vec_len_var = instance.#firstvar.len();
                     };
                 }
                 for witvar in vec_witness_varvec {
@@ -373,7 +373,7 @@ impl<'a> CodeGen<'a> {
                         #witness_vec_code
                         if #vec_len_var != witness.#witvar.len() {
                             eprintln!(
-                                "Params {} and {} must have the same length",
+                                "Instance variables {} and {} must have the same length",
                                 stringify!(#firstvar),
                                 stringify!(#witvar),
                             );
@@ -394,7 +394,7 @@ impl<'a> CodeGen<'a> {
                     for #vec_index_var in 0..#vec_len_var {
                         #lr_var.set_element(
                             #eq_id[#vec_index_var],
-                            #params_var.#left_id[#vec_index_var],
+                            #instance_var.#left_id[#vec_index_var],
                         );
                     }
                 };
@@ -405,7 +405,7 @@ impl<'a> CodeGen<'a> {
                 };
                 element_assigns = quote! {
                     #element_assigns
-                    #lr_var.set_element(#eq_id, #params_var.#left_id);
+                    #lr_var.set_element(#eq_id, #instance_var.#left_id);
                 }
             }
         }
@@ -545,17 +545,17 @@ impl<'a> CodeGen<'a> {
         self.statements.dump();
         println!("}}");
 
-        let mut pub_params_fields = StructFieldList::default();
-        pub_params_fields.push_vars(self.vars, true);
+        let mut pub_instance_fields = StructFieldList::default();
+        pub_instance_fields.push_vars(self.vars, true);
 
-        // Generate the public params struct definition
-        let params_def = {
-            let decls = pub_params_fields.field_decls();
+        // Generate the public instance struct definition
+        let instance_def = {
+            let decls = pub_instance_fields.field_decls();
             #[cfg(feature = "dump")]
             let dump_impl = {
-                let dump_chunks = pub_params_fields.dump();
+                let dump_chunks = pub_instance_fields.dump();
                 quote! {
-                    impl Params {
+                    impl Instance {
                         fn dump_scalar(s: &Scalar) {
                             let bytes: &[u8] = &s.to_repr();
                             print!("{:02x?}", bytes);
@@ -578,7 +578,7 @@ impl<'a> CodeGen<'a> {
             };
             quote! {
                 #[derive(Clone)]
-                pub struct Params {
+                pub struct Instance {
                     #decls
                 }
 
@@ -606,11 +606,11 @@ impl<'a> CodeGen<'a> {
 
         // Generate the function that creates the sigma-rs Protocol
         let protocol_func = {
-            let params_var = format_ident!("{}params", self.unique_prefix);
+            let instance_var = format_ident!("{}instance", self.unique_prefix);
 
             quote! {
                 fn protocol(
-                    #params_var: &Params,
+                    #instance_var: &Instance,
                 ) -> Result<Protocol<Point>, SigmaError> {
                     #protocol_code
                 }
@@ -621,7 +621,7 @@ impl<'a> CodeGen<'a> {
         let witness_func = if emit_prover {
             quote! {
                 fn protocol_witness(
-                    params: &Params,
+                    instance: &Instance,
                     witness: &Witness,
                 ) -> Result<ProtocolWitness<Point>, SigmaError> {
                     #witness_code
@@ -633,7 +633,7 @@ impl<'a> CodeGen<'a> {
 
         // Generate the prove function
         let prove_func = if emit_prover {
-            let params_var = format_ident!("{}params", self.unique_prefix);
+            let instance_var = format_ident!("{}instance", self.unique_prefix);
             let witness_var = format_ident!("{}witness", self.unique_prefix);
             let session_id_var = format_ident!("{}session_id", self.unique_prefix);
             let rng_var = format_ident!("{}rng", self.unique_prefix);
@@ -643,8 +643,8 @@ impl<'a> CodeGen<'a> {
 
             let dumper = if cfg!(feature = "dump") {
                 quote! {
-                    println!("prover params = {{");
-                    #params_var.dump();
+                    println!("prover instance = {{");
+                    #instance_var.dump();
                     println!("}}");
                 }
             } else {
@@ -653,14 +653,14 @@ impl<'a> CodeGen<'a> {
 
             quote! {
                 pub fn prove(
-                    #params_var: &Params,
+                    #instance_var: &Instance,
                     #witness_var: &Witness,
                     #session_id_var: &[u8],
                     #rng_var: &mut (impl CryptoRng + RngCore),
                 ) -> Result<Vec<u8>, SigmaError> {
                     #dumper
-                    let #proto_var = protocol(#params_var)?;
-                    let #proto_witness_var = protocol_witness(#params_var, #witness_var)?;
+                    let #proto_var = protocol(#instance_var)?;
+                    let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
                     let #nizk_var =
                         NISigmaProtocol::<_, ShakeCodec<Point>>::new(
                             #session_id_var,
@@ -676,7 +676,7 @@ impl<'a> CodeGen<'a> {
 
         // Generate the verify function
         let verify_func = if emit_verifier {
-            let params_var = format_ident!("{}params", self.unique_prefix);
+            let instance_var = format_ident!("{}instance", self.unique_prefix);
             let proof_var = format_ident!("{}proof", self.unique_prefix);
             let session_id_var = format_ident!("{}session_id", self.unique_prefix);
             let proto_var = format_ident!("{}proto", self.unique_prefix);
@@ -684,8 +684,8 @@ impl<'a> CodeGen<'a> {
 
             let dumper = if cfg!(feature = "dump") {
                 quote! {
-                    println!("verifier params = {{");
-                    #params_var.dump();
+                    println!("verifier instance = {{");
+                    #instance_var.dump();
                     println!("}}");
                 }
             } else {
@@ -694,12 +694,12 @@ impl<'a> CodeGen<'a> {
 
             quote! {
                 pub fn verify(
-                    #params_var: &Params,
+                    #instance_var: &Instance,
                     #proof_var: &[u8],
                     #session_id_var: &[u8],
                 ) -> Result<(), SigmaError> {
                     #dumper
-                    let #proto_var = protocol(#params_var)?;
+                    let #proto_var = protocol(#instance_var)?;
                     let #nizk_var =
                         NISigmaProtocol::<_, ShakeCodec<Point>>::new(
                             #session_id_var,
@@ -736,7 +736,7 @@ impl<'a> CodeGen<'a> {
                 #dump_use
 
                 #group_types
-                #params_def
+                #instance_def
                 #witness_def
 
                 #protocol_func

@@ -27,9 +27,9 @@ fn range_test() -> Result<(), sigma_rs::errors::Error> {
     let C = (x + x + x + Scalar::ONE) * A + (r + r + Scalar::from_u128(3)) * B;
     let D = x * A + y * B;
 
-    let params = proof::Params { C, D, a, A, B };
+    let instance = proof::Instance { C, D, a, A, B };
     let witness = proof::Witness { x, y, r };
 
-    let proof = proof::prove(&params, &witness, b"range_test", &mut rng)?;
-    proof::verify(&params, &proof, b"range_test")
+    let proof = proof::prove(&instance, &witness, b"range_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"range_test")
 }

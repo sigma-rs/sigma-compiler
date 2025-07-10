@@ -17,11 +17,11 @@ fn dl_zero_test() -> Result<(), sigma_rs::errors::Error> {
     let x = Scalar::random(&mut rng);
     let C = (x + Scalar::ZERO) * B;
 
-    let params = proof::Params { C, B };
+    let instance = proof::Instance { C, B };
     let witness = proof::Witness { x };
 
-    let proof = proof::prove(&params, &witness, b"dl_test", &mut rng)?;
-    proof::verify(&params, &proof, b"dl_test")
+    let proof = proof::prove(&instance, &witness, b"dl_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"dl_test")
 }
 
 #[test]
@@ -38,9 +38,9 @@ fn dl_one_test() -> Result<(), sigma_rs::errors::Error> {
     let x = Scalar::random(&mut rng);
     let C = (x + Scalar::ONE) * B;
 
-    let params = proof::Params { C, B };
+    let instance = proof::Instance { C, B };
     let witness = proof::Witness { x };
 
-    let proof = proof::prove(&params, &witness, b"dl_test", &mut rng)?;
-    proof::verify(&params, &proof, b"dl_test")
+    let proof = proof::prove(&instance, &witness, b"dl_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"dl_test")
 }

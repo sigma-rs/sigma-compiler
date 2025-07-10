@@ -29,9 +29,9 @@ fn pubscalars_test() -> Result<(), sigma_rs::errors::Error> {
     let C = x * A + r * B;
     let D = z * A + s * B;
 
-    let params = proof::Params { C, D, A, B, a, b };
+    let instance = proof::Instance { C, D, A, B, a, b };
     let witness = proof::Witness { x, z, r, s };
 
-    let proof = proof::prove(&params, &witness, b"pubscalars_test", &mut rng)?;
-    proof::verify(&params, &proof, b"pubscalars_test")
+    let proof = proof::prove(&instance, &witness, b"pubscalars_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"pubscalars_test")
 }
