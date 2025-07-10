@@ -314,15 +314,6 @@ impl CodeGen {
 
         // Generate the prove function
         let prove_func = if emit_prover {
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("prover params = {{");
-                    params.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
             let params_ids = pub_params_fields.field_list();
             let witness_ids = witness_fields.field_list();
             let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
@@ -350,6 +341,16 @@ impl CodeGen {
                     _ => quote! {},
                 });
                 quote! { #(#chunks)* }
+            };
+
+            let dumper = if cfg!(feature = "dump") {
+                quote! {
+                    println!("prover params = {{");
+                    #params_var.dump();
+                    println!("}}");
+                }
+            } else {
+                quote! {}
             };
 
             quote! {
@@ -388,15 +389,6 @@ impl CodeGen {
 
         // Generate the verify function
         let verify_func = if emit_verifier {
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("verifier params = {{");
-                    params.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
             let params_ids = pub_params_fields.field_list();
             let sigma_rs_params_ids = sigma_rs_params_fields.field_list();
             let verify_pre_params_code = &self.verify_pre_params_code;
@@ -440,6 +432,16 @@ impl CodeGen {
                     #element_len_code
                     #(#chunks)*
                 }
+            };
+
+            let dumper = if cfg!(feature = "dump") {
+                quote! {
+                    println!("verifier params = {{");
+                    #params_var.dump();
+                    println!("}}");
+                }
+            } else {
+                quote! {}
             };
 
             quote! {

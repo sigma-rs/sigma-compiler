@@ -631,15 +631,6 @@ impl<'a> CodeGen<'a> {
 
         // Generate the prove function
         let prove_func = if emit_prover {
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("prover params = {{");
-                    params.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
             let params_var = format_ident!("{}params", self.unique_prefix);
             let witness_var = format_ident!("{}witness", self.unique_prefix);
             let session_id_var = format_ident!("{}session_id", self.unique_prefix);
@@ -647,6 +638,16 @@ impl<'a> CodeGen<'a> {
             let proto_var = format_ident!("{}proto", self.unique_prefix);
             let proto_witness_var = format_ident!("{}proto_witness", self.unique_prefix);
             let nizk_var = format_ident!("{}nizk", self.unique_prefix);
+
+            let dumper = if cfg!(feature = "dump") {
+                quote! {
+                    println!("prover params = {{");
+                    #params_var.dump();
+                    println!("}}");
+                }
+            } else {
+                quote! {}
+            };
 
             quote! {
                 pub fn prove(
@@ -673,21 +674,21 @@ impl<'a> CodeGen<'a> {
 
         // Generate the verify function
         let verify_func = if emit_verifier {
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("verifier params = {{");
-                    params.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
-
             let params_var = format_ident!("{}params", self.unique_prefix);
             let proof_var = format_ident!("{}proof", self.unique_prefix);
             let session_id_var = format_ident!("{}session_id", self.unique_prefix);
             let proto_var = format_ident!("{}proto", self.unique_prefix);
             let nizk_var = format_ident!("{}nizk", self.unique_prefix);
+
+            let dumper = if cfg!(feature = "dump") {
+                quote! {
+                    println!("verifier params = {{");
+                    #params_var.dump();
+                    println!("}}");
+                }
+            } else {
+                quote! {}
+            };
 
             quote! {
                 pub fn verify(
