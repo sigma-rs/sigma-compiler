@@ -122,9 +122,9 @@ use syn::parse_macro_input;
 ///        prover and verifier to each just check that the statement is
 ///        satisfied.  Currently, there can be no vector variables in
 ///        this kind of statement.
-///      - `(a..b).contains(x)`, where `a` and `b` are _public_
-///        `Scalar`s (or arithmetic expressions evaluating to public
-///        `Scalar`s), and `x` is a private `Scalar`, possibly
+///      - `(a..b).contains(x)`, where `a` and `b` are constants or
+///        _public_ `Scalar`s (or arithmetic expressions evaluating to
+///        public `Scalar`s), and `x` is a private `Scalar`, possibly
 ///        multiplied by a constant and adding or subtracting an
 ///        expression evaluating to a public `Scalar`.  For example,
 ///        `((a+2)..(3*b-7)).contains(2*x+2*c*c+12)` is allowed, if `a`,
@@ -135,6 +135,16 @@ use syn::parse_macro_input;
 ///        If you want to include both endpoints, you can also use the
 ///        usual Rust notation `a..=b`.  The size of the range must fit
 ///        in an [`i128`].
+///      - `x != a`, where `x` is a private `Scalar`, possibly
+///        multiplied by a constant and adding or subtracting an
+///        expression evaluating to a public `Scalar`, and `a` is a
+///        constant or _public_ `Scalar` (or an arithmetic expression
+///        evaluating to a public `Scalar`).  For example, `2*x+2*c*c+12
+///        != a*b+17` is allowed, if `a`, `b`, and `c` are public
+///        `Scalar`s and `x` is a private `Scalar`.  `x != 0` is a more
+///        typical example.  This is a _not-equals statement_, and it
+///        means that the value of the expression on the left is not
+///        equal to the value of the expression on the right.
 ///
 /// The macro creates a submodule with the name specified by
 /// `proto_name`.  This module contains:

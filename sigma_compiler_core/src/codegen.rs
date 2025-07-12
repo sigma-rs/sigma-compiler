@@ -199,6 +199,21 @@ impl CodeGen {
     }
 
     /// Append some code to both the generated `prove` and `verify`
+    /// functions
+    pub fn prove_verify_append(&mut self, code: TokenStream) {
+        let prove_code = &self.prove_code;
+        self.prove_code = quote! {
+            #prove_code
+            #code
+        };
+        let verify_code = &self.verify_code;
+        self.verify_code = quote! {
+            #verify_code
+            #code
+        };
+    }
+
+    /// Append some code to both the generated `prove` and `verify`
     /// functions, the latter to be run before the `sent_instance` are
     /// deserialized
     pub fn prove_verify_pre_instance_append(&mut self, code: TokenStream) {

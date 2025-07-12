@@ -64,12 +64,7 @@ pub fn transform(
                             // We found a public Scalar equality
                             // statement.  Add code to both the prover
                             // and the verifier to check the statement.
-                            codegen.prove_append(quote! {
-                                if #id != #right_tokens {
-                                    return Err(SigmaError::VerificationFailure);
-                                }
-                            });
-                            codegen.verify_append(quote! {
+                            codegen.prove_verify_append(quote! {
                                 if #id != #right_tokens {
                                     return Err(SigmaError::VerificationFailure);
                                 }

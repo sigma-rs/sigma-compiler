@@ -190,7 +190,7 @@ fn parse(vars: &TaggedVarDict, vardict: &VarDict, expr: &Expr) -> Option<RangeSt
 /// Output code to convert a commitment given by a
 /// [`PedersenAssignment`] into one for a different [`LinScalar`] of the
 /// same variable.
-fn convert_commitment(
+pub fn convert_commitment(
     output_commitment: &Ident,
     ped_assign: &PedersenAssignment,
     new_linscalar: &LinScalar,
@@ -238,7 +238,7 @@ fn convert_commitment(
 /// Output code to convert the randomness given by a
 /// [`PedersenAssignment`] into that resulting from the conversion in
 /// [`convert_commitment`].
-fn convert_randomness(
+pub fn convert_randomness(
     output_randomness: &Ident,
     ped_assign: &PedersenAssignment,
     new_linscalar: &LinScalar,
@@ -411,8 +411,8 @@ pub fn transform(
         // ped_assign.pedersen.rand_term.coeff) as the randomness.  But
         // what we need is a Pedersen commitment for a possibly
         // different linear function of range_id (given by
-        // range_stmt.expr).  So we output runtime code for both the
-        // prover and the verifier that converts the commitment, and
+        // range_stmt.linscalar).  So we output runtime code for both
+        // the prover and the verifier that converts the commitment, and
         // code for just the prover that converts the randomness.
 
         // Make a new runtime variable to hold the converted commitment

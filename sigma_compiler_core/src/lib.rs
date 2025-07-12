@@ -9,6 +9,7 @@ pub mod sigma {
     pub mod types;
 }
 mod codegen;
+mod notequals;
 mod pedersen;
 mod pubscalareq;
 mod rangeproof;
@@ -42,6 +43,9 @@ pub fn sigma_compiler_core(
 
     // Apply any range statement transformations
     rangeproof::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
+
+    // Apply any not-equals statement transformations
+    notequals::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
 
     // Apply any public scalar equality transformations
     pubscalareq::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
