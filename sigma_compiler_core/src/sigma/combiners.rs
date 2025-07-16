@@ -204,10 +204,14 @@ impl StatementTree {
     ///
     /// A _disjunction node_ is an [`Or`](StatementTree::Or) or
     /// [`Thresh`](StatementTree::Thresh) node in the [`StatementTree`].
+    ///
+    /// A _disjunction branch_ is a subtree rooted at the child of a
+    /// disjunction node, or at the root of the [`StatementTree`].
+    ///
     /// The _disjunction invariant_ is that a private variable (which is
     /// necessarily a `Scalar` since there are no private `Point`
-    /// variables) that appears in the subtree rooted at a child of a
-    /// disjunction node cannot also appear outside of that subtree.
+    /// variables) that appears in a disjunction branch cannot also
+    /// appear outside of that disjunction branch.
     ///
     /// For example, if all of the lowercase variables are private
     /// `Scalar`s, the [`StatementTree`] created from:
