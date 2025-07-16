@@ -11,10 +11,9 @@
 
 use super::codegen::CodeGen;
 use super::pedersen::{
-    recognize_linscalar, recognize_pedersen_assignment, recognize_pubscalar, unique_random_scalars,
-    LinScalar, PedersenAssignment,
+    convert_commitment, convert_randomness, recognize_linscalar, recognize_pedersen_assignment,
+    recognize_pubscalar, unique_random_scalars, LinScalar, PedersenAssignment,
 };
-use super::rangeproof::{convert_commitment, convert_randomness};
 use super::sigma::combiners::*;
 use super::sigma::types::{expr_type_tokens, VarDict};
 use super::syntax::taggedvardict_to_vardict;
