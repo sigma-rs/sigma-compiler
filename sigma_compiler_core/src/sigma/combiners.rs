@@ -205,8 +205,9 @@ impl StatementTree {
     /// A _disjunction node_ is an [`Or`](StatementTree::Or) or
     /// [`Thresh`](StatementTree::Thresh) node in the [`StatementTree`].
     ///
-    /// A _disjunction branch_ is a subtree rooted at the child of a
-    /// disjunction node, or at the root of the [`StatementTree`].
+    /// A _disjunction branch_ is a subtree rooted at a non-disjuction
+    /// node that is the child of a disjunction node, or at the root of
+    /// the [`StatementTree`].
     ///
     /// The _disjunction invariant_ is that a private variable (which is
     /// necessarily a `Scalar` since there are no private `Point`
@@ -375,8 +376,16 @@ impl StatementTree {
         closure: &mut dyn FnMut(&mut StatementTree) -> Result<()>,
         is_new_branch: bool,
     ) -> Result<()> {
-        if is_new_branch {
-            (closure)(self)?;
+        // We're starting a new branch (and should call the closure) if
+        // and only if both is_new_branch is true, and also we're at a
+        // non-disjuction node
+        match self {
+            StatementTree::Leaf(_) | StatementTree::And(_) => {
+                if is_new_branch {
+                    (closure)(self)?;
+                }
+            }
+            _ => {}
         }
         match self {
             StatementTree::Leaf(_) => {}
@@ -1045,6 +1054,31 @@ mod test {
                 ],
                 vec![parse_quote! { c = d }],
                 vec![parse_quote! { c = d + 1 }],
+            ],
+        );
+
+        disjunction_branch_leaf_tester(
+            parse_quote! {
+               AND (
+                   C = c*B + r*A,
+                   D = d*B + s*A,
+                   OR (
+                       c = d,
+                       OR (
+                           c = d + 1,
+                           c = d + 2,
+                        )
+                   )
+               )
+            },
+            vec![
+                vec![
+                    parse_quote! { C = c*B + r*A },
+                    parse_quote! { D = d*B + s*A },
+                ],
+                vec![parse_quote! { c = d }],
+                vec![parse_quote! { c = d + 1 }],
+                vec![parse_quote! { c = d + 2 }],
             ],
         );
 
