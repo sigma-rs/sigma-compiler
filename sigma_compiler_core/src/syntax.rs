@@ -157,6 +157,26 @@ pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
         .collect()
 }
 
+/// Collect the list of [`Point`](TaggedIdent::Point)s tagged `cind`
+/// from the given [`TaggedVarDict`]
+pub fn collect_cind_points(vars: &TaggedVarDict) -> Vec<Ident> {
+    vars.values()
+        .filter_map(|ti| {
+            if let TaggedIdent::Point(TaggedPoint {
+                is_cind: true,
+                is_vec: false,
+                id,
+                ..
+            }) = ti
+            {
+                Some(id.clone())
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 /// Convert a list of strings describing `Scalar`s and a list of strings
 /// describing `Point`s into a [`TaggedVarDict`]

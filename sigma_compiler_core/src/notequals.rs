@@ -16,9 +16,9 @@ use super::pedersen::{
 };
 use super::sigma::combiners::*;
 use super::sigma::types::{expr_type_tokens, VarDict};
-use super::syntax::taggedvardict_to_vardict;
+use super::syntax::{collect_cind_points, taggedvardict_to_vardict};
 use super::transform::paren_if_needed;
-use super::{TaggedIdent, TaggedPoint, TaggedVarDict};
+use super::TaggedVarDict;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
 use syn::{parse_quote, Error, Expr, Ident, Result};
@@ -93,22 +93,7 @@ pub fn transform(
     // the macro input.  There must be at least two of them in order to
     // handle not-equals statements, so that we can make Pedersen
     // commitments.
-    let cind_points: Vec<Ident> = vars
-        .values()
-        .filter_map(|ti| {
-            if let TaggedIdent::Point(TaggedPoint {
-                is_cind: true,
-                is_vec: false,
-                id,
-                ..
-            }) = ti
-            {
-                Some(id.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
+    let cind_points = collect_cind_points(vars);
 
     // Find any statements that look like Pedersen commitments in the
     // StatementTree, and make a HashMap mapping the committed private
