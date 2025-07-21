@@ -312,9 +312,9 @@ pub fn transform(
         // ped_assign.pedersen.rand_term.coeff) as the randomness.  But
         // what we need is a Pedersen commitment for a possibly
         // different linear function of range_id (given by
-        // range_stmt.linscalar).  So we output runtime code for both
-        // the prover and the verifier that converts the commitment, and
-        // code for just the prover that converts the randomness.
+        // range_stmt.linscalar).  So we output runtime code for the
+        // verifier that converts the commitment, and code for the
+        // prover that converts the randomness.
 
         // Make a new runtime variable to hold the converted commitment
         let commitment_var =
