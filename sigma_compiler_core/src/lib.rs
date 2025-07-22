@@ -15,7 +15,7 @@ mod pubscalareq;
 mod rangeproof;
 mod substitution;
 mod syntax;
-mod transform;
+pub mod transform;
 
 pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, TaggedVarDict};
 
@@ -37,6 +37,12 @@ pub fn sigma_compiler_core(
     emit_verifier: bool,
 ) -> TokenStream {
     let mut codegen = codegen::CodeGen::new(spec);
+
+    // Enforce the disjunction invariant (do this before any other
+    // transformations, since they assume the invariant holds, and will
+    // maintain it)
+    transform::enforce_disjunction_invariant(&mut codegen, &mut spec.statements, &mut spec.vars)
+        .unwrap();
 
     // Apply any substitution transformations
     substitution::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();

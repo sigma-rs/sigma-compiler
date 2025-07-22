@@ -3,10 +3,10 @@
 
 use super::types::*;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use syn::parse::Result;
 use syn::visit::Visit;
-use syn::{parse_quote, Expr};
+use syn::{parse_quote, Expr, Ident};
 
 /// For each [`Ident`](struct@syn::Ident) representing a private
 /// `Scalar` (as listed in a [`VarDict`]) that appears in an [`Expr`],
@@ -273,11 +273,13 @@ impl StatementTree {
     ///
     /// is exactly that the invariant must be satisfied.
     ///
-    /// (In the future, it is possible we may provide a transformer that
-    /// will automatically convert [`StatementTree`]s to ones that
-    /// satisfy the invariant, but for now, the user of the macro must
-    /// manually write the statements in a form that satisfies the
-    /// disjunction invariant.
+    /// If you don't know that your [`StatementTree`] already satisfies
+    /// the invariant, call
+    /// [`enforce_disjunction_invariant`](super::super::transform::enforce_disjunction_invariant),
+    /// which will transform the [`StatementTree`] so that it does (and
+    /// also call this
+    /// [`check_disjunction_invariant`](StatementTree::check_disjunction_invariant)
+    /// function as a sanity check).
     pub fn check_disjunction_invariant(&self, vars: &VarDict) -> Result<()> {
         let mut disjunct_map: HashMap<String, usize> = HashMap::new();
 
@@ -459,6 +461,30 @@ impl StatementTree {
             }
         }
         Ok(())
+    }
+
+    /// Produce a [`HashSet`] of the private Scalars that appear in any
+    /// leaf of the given [disjunction branch].
+    ///
+    /// [disjunction branch]: StatementTree::check_disjunction_invariant
+    pub fn disjunction_branch_priv_scalars(&mut self, vars: &VarDict) -> HashSet<Ident> {
+        let mut priv_scalars: HashSet<Ident> = HashSet::new();
+        self.for_each_disjunction_branch_leaf(&mut |leaf| {
+            if let StatementTree::Leaf(leafexpr) = leaf {
+                let mut psmap = PrivScalarMap {
+                    vars,
+                    closure: &mut |ident| {
+                        priv_scalars.insert(ident.clone());
+                        Ok(())
+                    },
+                    result: Ok(()),
+                };
+                psmap.visit_expr(leafexpr);
+            }
+            Ok(())
+        })
+        .unwrap();
+        priv_scalars
     }
 
     #[cfg(not(doctest))]
