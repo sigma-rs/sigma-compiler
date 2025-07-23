@@ -43,6 +43,7 @@ use super::transform::{paren_if_needed, prune_statement_tree};
 use super::{TaggedIdent, TaggedScalar, TaggedVarDict};
 use quote::quote;
 use std::collections::{HashSet, VecDeque};
+use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::visit_mut::{self, VisitMut};
 use syn::{parse_quote, Error, Expr, Ident, Result};
@@ -151,6 +152,15 @@ pub fn transform(
                     });
                     let right = paren_if_needed(*right);
                     subs.push_back((id, right, used_priv_scalars));
+                } else {
+                    return Err(Error::new(
+                        right.span(),
+                        format!(
+                            "Unrecognized arithmetic expression in substitution: {} = {}",
+                            id,
+                            quote! {#right}
+                        ),
+                    ));
                 }
             }
         }
