@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 use curve25519_dalek::ristretto::RistrettoPoint as G;
 use group::Group;
-use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
