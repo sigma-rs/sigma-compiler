@@ -859,13 +859,13 @@ mod tests {
             &vars,
             parse_quote! {(a-(2-3))*(A+(3*4)*A)},
             quote! {
-            (a-(Scalar::from_u128(1u128).neg()))*(A+A*(Scalar::from_u128(12u128))) },
+            (a+(-(Scalar::from_u128(1u128).neg())))*(A+A*(Scalar::from_u128(12u128))) },
         );
         check_tokens(
             &vars,
             parse_quote! {(a-(2-3))*(A+A*(3*4))},
             quote! {
-            (a-(Scalar::from_u128(1u128).neg()))*(A+A*(Scalar::from_u128(12u128))) },
+            (a+(-(Scalar::from_u128(1u128).neg())))*(A+A*(Scalar::from_u128(12u128))) },
         );
 
         // Tests that should fail
