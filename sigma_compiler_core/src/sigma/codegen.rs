@@ -733,6 +733,7 @@ impl<'a> CodeGen<'a> {
                 };
                 use sigma_compiler::rand::{CryptoRng, RngCore};
                 use sigma_compiler::group::ff::PrimeField;
+                use std::ops::Neg;
                 #dump_use
 
                 #group_types
