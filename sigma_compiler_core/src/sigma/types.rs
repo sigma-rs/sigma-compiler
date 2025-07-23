@@ -681,7 +681,7 @@ impl<'a> AExprFold<TokenStream> for AExprTokenFold<'a> {
     ) -> Result<TokenStream> {
         let le = larg.1;
         let re = rarg.1;
-        Ok(quote! { #le - #re })
+        Ok(quote! { #le + (-#re) })
     }
 
     /// Called when subtracting two `Point`s
