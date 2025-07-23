@@ -6,12 +6,12 @@ use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
-fn range_test() -> Result<(), sigma_rs::errors::Error> {
+fn disj_test() -> Result<(), sigma_rs::errors::Error> {
     sigma_compiler! { proof,
         (x, rand r),
         (C, const cind A, const cind B),
         C = (3*x+1)*A + (2*r+3)*B,
-        OR(
+        OR (
             x=1,
             x=2,
         )
