@@ -15,7 +15,7 @@ fn subtract_test() -> Result<(), sigma_rs::errors::Error> {
     let mut rng = rand::thread_rng();
     let B = G::generator();
     let x = Scalar::random(&mut rng);
-    let C = (x-Scalar::ONE)*B;
+    let C = (x - Scalar::ONE) * B;
 
     let instance = proof::Instance { C, B };
     let witness = proof::Witness { x };
