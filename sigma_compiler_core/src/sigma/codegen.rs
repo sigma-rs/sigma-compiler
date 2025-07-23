@@ -662,7 +662,7 @@ impl<'a> CodeGen<'a> {
                     let #proto_var = protocol(#instance_var)?;
                     let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
                     let #nizk_var =
-                        NISigmaProtocol::<_, ShakeCodec<Point>>::new(
+                        Nizk::<_, ShakeCodec<Point>>::new(
                             #session_id_var,
                             #proto_var,
                         );
@@ -701,7 +701,7 @@ impl<'a> CodeGen<'a> {
                     #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #nizk_var =
-                        NISigmaProtocol::<_, ShakeCodec<Point>>::new(
+                        Nizk::<_, ShakeCodec<Point>>::new(
                             #session_id_var,
                             #proto_var,
                         );
@@ -729,7 +729,7 @@ impl<'a> CodeGen<'a> {
                     codec::ShakeCodec,
                     composition::{Protocol, ProtocolWitness},
                     errors::Error as SigmaError,
-                    LinearRelation, NISigmaProtocol,
+                    LinearRelation, Nizk,
                 };
                 use sigma_compiler::rand::{CryptoRng, RngCore};
                 use sigma_compiler::group::ff::PrimeField;
