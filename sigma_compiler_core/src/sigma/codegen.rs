@@ -330,11 +330,11 @@ impl<'a> CodeGen<'a> {
             };
             let AExprType::Point {
                 is_vec: right_is_vec,
-                is_pub: false,
+                ..
             } = right_type
             else {
                 let expr_str = quote! { #expr }.to_string();
-                panic!("Right side of = does not evaluate to a private Point: {expr_str}");
+                panic!("Right side of = does not evaluate to a Point: {expr_str}");
             };
             if *left_is_vec != right_is_vec {
                 let expr_str = quote! { #expr }.to_string();
