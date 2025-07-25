@@ -29,5 +29,6 @@ fn disj_test() -> Result<(), sigma_rs::errors::Error> {
     let witness = proof::Witness { x, r };
 
     let proof = proof::prove(&instance, &witness, b"disj_test", &mut rng)?;
-    proof::verify(&instance, &proof, b"disj_test")
+    proof::verify(&instance, &proof, b"disj_test")?;
+    Ok(())
 }

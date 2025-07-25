@@ -183,11 +183,11 @@ impl<'a> CodeGen<'a> {
     }
 
     /// Generate the code for the `protocol` and `protocol_witness`
-    /// functions that create the `Protocol` and `ProtocolWitness`
+    /// functions that create the [`ComposedRelation`] and `ComposedWitness`
     /// structs, respectively, given a slice of [`Expr`]s that will be
     /// bundled into a single `LinearRelation`.  The `protocol` code
-    /// must evaluate to a `Result<Protocol>` and the `protocol_witness`
-    /// code must evaluate to a `Result<ProtocolWitness>`.
+    /// must evaluate to a `Result<ComposedRelation>` and the `protocol_witness`
+    /// code must evaluate to a `Result<ComposedWitness>`.
     fn linear_relation_codegen(&self, exprs: &[&Expr]) -> (TokenStream, TokenStream) {
         let instance_var = format_ident!("{}instance", self.unique_prefix);
         let lr_var = format_ident!("{}lr", self.unique_prefix);
@@ -420,7 +420,7 @@ impl<'a> CodeGen<'a> {
                     #eq_code
                     #element_assigns
 
-                    Ok(Protocol::from(#lr_var))
+                    Ok(ComposedRelation::from(#lr_var))
                 }
             },
             quote! {
@@ -428,30 +428,30 @@ impl<'a> CodeGen<'a> {
                     #witness_vec_code
                     let mut witnessvec = Vec::new();
                     #witness_code
-                    Ok(ProtocolWitness::Simple(witnessvec))
+                    Ok(ComposedWitness::Simple(witnessvec))
                 }
             },
         )
     }
 
     /// Generate the code for the `protocol` and `protocol_witness`
-    /// functions that create the `Protocol` and `ProtocolWitness`
+    /// functions that create the `Protocol` and `ComposedWitness`
     /// structs, respectively, given a [`StatementTree`] describing the
     /// statements to be proven.  The output components are the code for
     /// the `protocol` and `protocol_witness` functions, respectively.
     /// The `protocol` code must evaluate to a `Result<Protocol>` and
     /// the `protocol_witness` code must evaluate to a
-    /// `Result<ProtocolWitness>`.
+    /// `Result<ComposedWitness>`.
     fn proto_witness_codegen(&self, statement: &StatementTree) -> (TokenStream, TokenStream) {
         match statement {
             // The StatementTree has no statements (it's just the single
             // leaf "true")
             StatementTree::Leaf(_) if statement.is_leaf_true() => (
                 quote! {
-                    Ok(Protocol::from(LinearRelation::<Point>::new()))
+                    Ok(ComposedRelation::from(LinearRelation::<Point>::new()))
                 },
                 quote! {
-                    Ok(ProtocolWitness::Simple(vec![]))
+                    Ok(ComposedWitness::Simple(vec![]))
                 },
             ),
             // The StatementTree is a single statement.  Generate a
@@ -483,15 +483,15 @@ impl<'a> CodeGen<'a> {
                             .unzip();
                     (
                         quote! {
-                            Ok(Protocol::And(vec![
-                                #proto_code?,
-                                #(#others_proto?,)*
+                            Ok(ComposedRelation::And(vec![
+                                #proto_code.map_err(|e| -> SigmaError { e })?,
+                                #(#others_proto.map_err(|e| -> SigmaError { e })?,)*
                             ]))
                         },
                         quote! {
-                            Ok(ProtocolWitness::And(vec![
-                                #witness_code?,
-                                #(#others_witness?,)*
+                            Ok(ComposedWitness::And(vec![
+                                #witness_code.map_err(|e| -> SigmaError { e })?,
+                                #(#others_witness.map_err(|e| -> SigmaError { e })?,)*
                             ]))
                         },
                     )
@@ -504,15 +504,15 @@ impl<'a> CodeGen<'a> {
                     .unzip();
                 (
                     quote! {
-                        Ok(Protocol::Or(vec![
-                            #(#proto?,)*
+                        Ok(ComposedRelation::Or(vec![
+                            #(#proto.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
                     // TODO: Choose the correct branch for the witness
                     // (currently hardcoded at 0)
                     quote! {
-                        Ok(ProtocolWitness::Or(0, vec![
-                            #(#witness?,)*
+                        Ok(ComposedWitness::Or(0, vec![
+                            #(#witness.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
                 )
@@ -611,19 +611,19 @@ impl<'a> CodeGen<'a> {
             quote! {
                 fn protocol(
                     #instance_var: &Instance,
-                ) -> Result<Protocol<Point>, SigmaError> {
+                ) -> Result<ComposedRelation<Point>, SigmaError> {
                     #protocol_code
                 }
             }
         };
 
-        // Generate the function that creates the sigma-rs ProtocolWitness
+        // Generate the function that creates the sigma-rs ComposedWitness
         let witness_func = if emit_prover {
             quote! {
                 fn protocol_witness(
                     instance: &Instance,
                     witness: &Witness,
-                ) -> Result<ProtocolWitness<Point>, SigmaError> {
+                ) -> Result<ComposedWitness<Point>, SigmaError> {
                     #witness_code
                 }
             }
@@ -727,7 +727,7 @@ impl<'a> CodeGen<'a> {
                 use sigma_compiler::sigma_rs;
                 use sigma_rs::{
                     codec::Shake128DuplexSponge,
-                    composition::{Protocol, ProtocolWitness},
+                    composition::{ComposedRelation, ComposedWitness},
                     errors::Error as SigmaError,
                     LinearRelation, Nizk,
                 };

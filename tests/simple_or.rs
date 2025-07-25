@@ -27,5 +27,6 @@ fn simple_or_test() -> Result<(), sigma_rs::errors::Error> {
     let witness = proof::Witness { x, y };
 
     let proof = proof::prove(&instance, &witness, b"simple_or_test", &mut rng)?;
-    proof::verify(&instance, &proof, b"simple_or_test")
+    proof::verify(&instance, &proof, b"simple_or_test")?;
+    Ok(())
 }
