@@ -661,11 +661,7 @@ impl<'a> CodeGen<'a> {
                     #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
-                    let #nizk_var =
-                        Nizk::<_, Shake128DuplexSponge<Point>>::new(
-                            #session_id_var,
-                            #proto_var,
-                        );
+                    let #nizk_var = #proto_var.into_nizk(#session_id_var);
 
                     #nizk_var.prove_batchable(&#proto_witness_var, #rng_var)
                 }
@@ -700,11 +696,7 @@ impl<'a> CodeGen<'a> {
                 ) -> Result<(), SigmaError> {
                     #dumper
                     let #proto_var = protocol(#instance_var)?;
-                    let #nizk_var =
-                        Nizk::<_, Shake128DuplexSponge<Point>>::new(
-                            #session_id_var,
-                            #proto_var,
-                        );
+                    let #nizk_var = #proto_var.into_nizk(#session_id_var);
 
                     #nizk_var.verify_batchable(#proof_var)
                 }
@@ -726,7 +718,6 @@ impl<'a> CodeGen<'a> {
             pub mod #proto_name {
                 use sigma_compiler::sigma_rs;
                 use sigma_rs::{
-                    codec::Shake128DuplexSponge,
                     composition::{ComposedRelation, ComposedWitness},
                     errors::Error as SigmaError,
                     LinearRelation, Nizk,
