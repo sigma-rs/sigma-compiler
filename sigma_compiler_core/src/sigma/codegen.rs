@@ -183,7 +183,7 @@ impl<'a> CodeGen<'a> {
     }
 
     /// Generate the code for the `protocol` and `protocol_witness`
-    /// functions that create the [`ComposedRelation`] and `ComposedWitness`
+    /// functions that create the `ComposedRelation` and `ComposedWitness`
     /// structs, respectively, given a slice of [`Expr`]s that will be
     /// bundled into a single `LinearRelation`.  The `protocol` code
     /// must evaluate to a `Result<ComposedRelation>` and the `protocol_witness`
