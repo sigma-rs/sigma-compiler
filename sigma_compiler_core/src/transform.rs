@@ -436,8 +436,13 @@ pub fn enforce_disjunction_invariant(
                     let #rand_var = #root_rand_var;
                 });
             }
+            // The generators for the Pedersen commitment for this id
+            let ped_assign = invariant_violator_pedersens.get(&id).unwrap();
+            let var_generator = &ped_assign.pedersen.var_term.id;
+            let rand_generator = &ped_assign.pedersen.rand_term.id;
+
             branch_extra_statements.push(StatementTree::Leaf(parse_quote! {
-                #root_commitment_var = #id_var * #cind_A + #rand_var * #cind_B
+                #root_commitment_var = #id_var * #var_generator + #rand_var * #rand_generator
             }));
         }
 
