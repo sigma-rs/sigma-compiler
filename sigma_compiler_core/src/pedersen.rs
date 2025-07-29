@@ -96,7 +96,7 @@ pub struct LinScalar {
 
 impl LinScalar {
     /// Negate a [`LinScalar`]
-    pub fn neg(self) -> Result<Self> {
+    pub fn negate(self) -> Result<Self> {
         Ok(Self {
             coeff: self.coeff.checked_neg().ok_or(Error::new(
                 proc_macro2::Span::call_site(),
@@ -207,7 +207,7 @@ pub struct CIndPoint {
 
 impl CIndPoint {
     /// Negate a [`CIndPoint`]
-    pub fn neg(self) -> Result<Self> {
+    pub fn negate(self) -> Result<Self> {
         Ok(Self {
             coeff: Some(if let Some(expr) = self.coeff {
                 let pexpr = paren_if_needed(expr);
@@ -291,9 +291,9 @@ pub struct Term {
 
 impl Term {
     /// Negate a [`Term`]
-    pub fn neg(self) -> Result<Self> {
+    pub fn negate(self) -> Result<Self> {
         Ok(Self {
-            coeff: self.coeff.neg()?,
+            coeff: self.coeff.negate()?,
             ..self
         })
     }
@@ -356,10 +356,10 @@ impl Pedersen {
     }
 
     /// Negate a [`Pedersen`]
-    pub fn neg(self) -> Result<Self> {
+    pub fn negate(self) -> Result<Self> {
         Ok(Self {
-            var_term: self.var_term.neg()?,
-            rand_term: self.rand_term.neg()?,
+            var_term: self.var_term.negate()?,
+            rand_term: self.rand_term.negate()?,
         })
     }
 
@@ -498,10 +498,10 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
             PedersenExpr::PubScalarExpr(expr) => {
                 Ok(PedersenExpr::PubScalarExpr(parse_quote! { -#expr }))
             }
-            PedersenExpr::LinScalar(linscalar) => Ok(PedersenExpr::LinScalar(linscalar.neg()?)),
-            PedersenExpr::CIndPoint(cind) => Ok(PedersenExpr::CIndPoint(cind.neg()?)),
-            PedersenExpr::Term(term) => Ok(PedersenExpr::Term(term.neg()?)),
-            PedersenExpr::Pedersen(pedersen) => Ok(PedersenExpr::Pedersen(pedersen.neg()?)),
+            PedersenExpr::LinScalar(linscalar) => Ok(PedersenExpr::LinScalar(linscalar.negate()?)),
+            PedersenExpr::CIndPoint(cind) => Ok(PedersenExpr::CIndPoint(cind.negate()?)),
+            PedersenExpr::Term(term) => Ok(PedersenExpr::Term(term.negate()?)),
+            PedersenExpr::Pedersen(pedersen) => Ok(PedersenExpr::Pedersen(pedersen.negate()?)),
         }
     }
 
