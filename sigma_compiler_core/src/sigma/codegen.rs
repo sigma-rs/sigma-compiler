@@ -508,11 +508,11 @@ impl<'a> CodeGen<'a> {
                             #(#proto.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
-                    // TODO: Choose the correct branch for the witness
-                    // (currently hardcoded at 0)
                     quote! {
-                        Ok(ComposedWitness::Or(0, vec![
-                            #(#witness.map_err(|e| -> SigmaError { e })?,)*
+                        Ok(ComposedWitness::Or(vec![
+                            #(CtOption::new(
+                                #witness.map_err(|e| -> SigmaError { e })?,
+                                1u8.into()),)*
                         ]))
                     },
                 )
@@ -724,6 +724,7 @@ impl<'a> CodeGen<'a> {
                 };
                 use sigma_compiler::rand::{CryptoRng, RngCore};
                 use sigma_compiler::group::ff::PrimeField;
+                use sigma_compiler::subtle::CtOption;
                 use std::ops::Neg;
                 #dump_use
 
