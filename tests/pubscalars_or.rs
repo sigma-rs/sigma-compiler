@@ -5,14 +5,17 @@ use group::Group;
 use sha2::Sha512;
 use sigma_compiler::*;
 
-fn pubscalars_test_val(b_val: u128) -> Result<(), sigma_rs::errors::Error> {
+fn pubscalars_or_test_val(b_val: u128) -> Result<(), sigma_rs::errors::Error> {
     sigma_compiler! { proof,
         (x, z, rand r, rand s, pub a, pub b),
         (C, D, const cind A, const cind B),
         C = x*A + r*B,
         D = z*A + s*B,
         z = 2*x + a,
-        b = 2*a - 3,
+        OR (
+            b = 2*a,
+            b = 2*a - 3,
+        )
     }
 
     type Scalar = <G as Group>::Scalar;
@@ -31,16 +34,16 @@ fn pubscalars_test_val(b_val: u128) -> Result<(), sigma_rs::errors::Error> {
     let instance = proof::Instance { C, D, A, B, a, b };
     let witness = proof::Witness { x, z, r, s };
 
-    let proof = proof::prove(&instance, &witness, b"pubscalars_test", &mut rng)?;
-    proof::verify(&instance, &proof, b"pubscalars_test")
+    let proof = proof::prove(&instance, &witness, b"pubscalars_or_test", &mut rng)?;
+    proof::verify(&instance, &proof, b"pubscalars_or_test")
 }
 
 #[test]
-fn pubscalars_test() {
-    pubscalars_test_val(10u128).unwrap_err();
-    pubscalars_test_val(11u128).unwrap();
-    pubscalars_test_val(12u128).unwrap_err();
-    pubscalars_test_val(13u128).unwrap_err();
-    pubscalars_test_val(14u128).unwrap_err();
-    pubscalars_test_val(15u128).unwrap_err();
+fn pubscalars_or_test() {
+    pubscalars_or_test_val(10u128).unwrap_err();
+    pubscalars_or_test_val(11u128).unwrap();
+    pubscalars_or_test_val(12u128).unwrap_err();
+    pubscalars_or_test_val(13u128).unwrap_err();
+    pubscalars_or_test_val(14u128).unwrap();
+    pubscalars_or_test_val(15u128).unwrap_err();
 }
