@@ -204,39 +204,53 @@ impl<'a> CodeGen<'a> {
             let eq_id = format_ident!("{}eq{}", self.unique_prefix, i + 1);
             let vec_index_var = format_ident!("{}i", self.unique_prefix);
             let vec_len_var = format_ident!("{}veclen{}", self.unique_prefix, i + 1);
-            // Ensure the `Expr` is of a type we recognize.  In
-            // particular, it must be an assignment (C = something)
-            // where the variable on the left is a public Point, and the
-            // something on the right is an arithmetic expression that
-            // evaluates to a private Point.  It is allowed for neither
-            // or both Points to be vector variables.
-            let Expr::Assign(syn::ExprAssign { left, right, .. }) = expr else {
-                let expr_str = quote! { #expr }.to_string();
-                panic!("Unrecognized expression: {expr_str}");
-            };
-            let Expr::Path(syn::ExprPath { path, .. }) = left.as_ref() else {
-                let expr_str = quote! { #expr }.to_string();
-                panic!("Left side of = is not a variable: {expr_str}");
-            };
-            let Some(left_id) = path.get_ident() else {
-                let expr_str = quote! { #expr }.to_string();
-                panic!("Left side of = is not a variable: {expr_str}");
-            };
-            let Some(AExprType::Point {
-                is_vec: left_is_vec,
-                is_pub: true,
-            }) = self.vars.get(&left_id.to_string())
-            else {
-                let expr_str = quote! { #expr }.to_string();
-                panic!("Left side of = is not a public point: {expr_str}");
-            };
+
             // Record any vector variables we encountered in this
             // expression
             let mut vec_param_vars: HashSet<Ident> = HashSet::new();
             let mut vec_witness_vars: HashSet<Ident> = HashSet::new();
-            if *left_is_vec {
-                vec_param_vars.insert(left_id.clone());
-            }
+
+            // Ensure the `Expr` is of a type we recognize.  In
+            // particular, it must be an assignment (left = right) where
+            // the expression on the left is an arithmetic expression
+            // that evaluates to a public Point, and the expression on
+            // the right is an arithmetic expression that evaluates to a
+            // Point.  It is allowed for neither or both Points to be
+            // vector variables.
+            let Expr::Assign(syn::ExprAssign { left, right, .. }) = expr else {
+                let expr_str = quote! { #expr }.to_string();
+                panic!("Unrecognized expression: {expr_str}");
+            };
+            let (left_type, left_tokens) =
+                expr_type_tokens_id_closure(self.vars, left, &mut |id, id_type| match id_type {
+                    AExprType::Scalar { is_pub: false, .. } => {
+                        panic!("Left side of = contains a private Scalar");
+                    }
+                    AExprType::Scalar {
+                        is_vec: false,
+                        is_pub: true,
+                        ..
+                    }
+                    | AExprType::Point { is_vec: false, .. } => Ok(quote! {#instance_var.#id}),
+                    AExprType::Scalar {
+                        is_vec: true,
+                        is_pub: true,
+                        ..
+                    }
+                    | AExprType::Point { is_vec: true, .. } => {
+                        vec_param_vars.insert(id.clone());
+                        Ok(quote! {#instance_var.#id[#vec_index_var]})
+                    }
+                })
+                .unwrap();
+            let AExprType::Point {
+                is_pub: true,
+                is_vec: left_is_vec,
+            } = left_type
+            else {
+                let expr_str = quote! { #expr }.to_string();
+                panic!("Left side of = does not evaluate to a public point: {expr_str}");
+            };
             let Ok((right_type, right_tokens)) =
                 expr_type_tokens_id_closure(self.vars, right, &mut |id, id_type| match id_type {
                     AExprType::Scalar {
@@ -336,7 +350,7 @@ impl<'a> CodeGen<'a> {
                 let expr_str = quote! { #expr }.to_string();
                 panic!("Right side of = does not evaluate to a Point: {expr_str}");
             };
-            if *left_is_vec != right_is_vec {
+            if left_is_vec != right_is_vec {
                 let expr_str = quote! { #expr }.to_string();
                 panic!("Only one side of = is a vector expression: {expr_str}");
             }
@@ -394,7 +408,7 @@ impl<'a> CodeGen<'a> {
                     for #vec_index_var in 0..#vec_len_var {
                         #lr_var.set_element(
                             #eq_id[#vec_index_var],
-                            #instance_var.#left_id[#vec_index_var],
+                            #left_tokens,
                         );
                     }
                 };
@@ -405,7 +419,7 @@ impl<'a> CodeGen<'a> {
                 };
                 element_assigns = quote! {
                     #element_assigns
-                    #lr_var.set_element(#eq_id, #instance_var.#left_id);
+                    #lr_var.set_element(#eq_id, #left_tokens);
                 }
             }
         }

@@ -101,6 +101,12 @@ use syn::parse_macro_input;
 ///        hold component-wise.  Any non-vector variable in the
 ///        statement is considered equivalent to a vector variable, all
 ///        of whose entries have the same value.
+///
+///        As an extension, you can also use an arithmetic expression
+///        evaluating to a _public_ `Point` in place of `C` on the left
+///        side of the `=`.  For example, if `a` is a `Scalar` tagged
+///        `pub`, and `C` is a `Point`, then the expression `(2*a+1)*C =
+///        arith_expr` is a valid linear combination statement.
 ///      - `a = arith_expr`, where `a` is a variable representing a
 ///        private `Scalar`.  This is a _substitution statement_.  Its
 ///        meaning is to say that the private `Scalar` `a` has the value
