@@ -112,69 +112,71 @@ pub fn transform(
         // Are we in the root disjunction branch?  (path is empty)
         let in_root_disjunction_branch = path.is_empty();
 
-    // For each leaf expression, see if it looks like a substitution of
-    // a private Scalar
+        // For each leaf expression, see if it looks like a substitution of
+        // a private Scalar
         branch.for_each_disjunction_branch_leaf(&mut |leaf| {
-        let mut is_subs = None;
-        if let StatementTree::Leaf(Expr::Assign(syn::ExprAssign { left, .. })) = leaf {
-            if let Expr::Path(syn::ExprPath { path, .. }) = left.as_ref() {
-                if let Some(id) = path.get_ident() {
-                    let idstr = id.to_string();
-                    if let Some(TaggedIdent::Scalar(TaggedScalar { is_pub: false, .. })) =
-                        vars.get(&idstr)
-                    {
-                        is_subs = Some(id.clone());
-                    }
-                }
-            }
-        }
-        if let Some(id) = is_subs {
-            // If this leaf is a substitution of a private Scalar, add
-            // it to subs, replace it in the StatementTree with the
-            // constant true, and generate some code for `prove` to
-            // check the statement.
-            let old_leaf = std::mem::replace(leaf, StatementTree::leaf_true());
-            // This "if let" is guaranteed to succeed
-            if let StatementTree::Leaf(Expr::Assign(syn::ExprAssign {
-            right, .. })) = old_leaf {
-                if let Ok((_, right_tokens)) = expr_type_tokens(&vardict, &right) {
-                    let used_priv_scalars = priv_scalar_set(&right, vars);
-                    if !subs_vars.insert(id.to_string()) {
-                        return Err(Error::new(id.span(), "variable substituted multiple times"));
-                    }
-                    // Only if we're in the root disjunction branch,
-                    // check whether the substituted Witness value
-                    // actually equals the value it's being substituted
-                    // for.  We can't do this for substitutions in other
-                    // disjunction branches, since it may not be true
-                    // there.
-                    if in_root_disjunction_branch {
-                    codegen.prove_append(quote! {
-                        // It's OK to have a test that observably fails
-                        // for illegal inputs (but is constant time for
-                        // valid inputs)
-                        if #id != #right_tokens {
-                            return Err(SigmaError::VerificationFailure);
+            let mut is_subs = None;
+            if let StatementTree::Leaf(Expr::Assign(syn::ExprAssign { left, .. })) = leaf {
+                if let Expr::Path(syn::ExprPath { path, .. }) = left.as_ref() {
+                    if let Some(id) = path.get_ident() {
+                        let idstr = id.to_string();
+                        if let Some(TaggedIdent::Scalar(TaggedScalar { is_pub: false, .. })) =
+                            vars.get(&idstr)
+                        {
+                            is_subs = Some(id.clone());
                         }
-                    });
                     }
-                    let right = paren_if_needed(*right);
-                    subs.push_back((id, right, used_priv_scalars));
-                } else {
-                    return Err(Error::new(
-                        right.span(),
-                        format!(
-                            "Unrecognized arithmetic expression in substitution: {} = {}",
-                            id,
-                            quote! {#right}
-                        ),
-                    ));
                 }
             }
-        }
-    Ok(())
-    }
-    )})?;
+            if let Some(id) = is_subs {
+                // If this leaf is a substitution of a private Scalar, add
+                // it to subs, replace it in the StatementTree with the
+                // constant true, and generate some code for `prove` to
+                // check the statement.
+                let old_leaf = std::mem::replace(leaf, StatementTree::leaf_true());
+                // This "if let" is guaranteed to succeed
+                if let StatementTree::Leaf(Expr::Assign(syn::ExprAssign { right, .. })) = old_leaf {
+                    if let Ok((_, right_tokens)) = expr_type_tokens(&vardict, &right) {
+                        let used_priv_scalars = priv_scalar_set(&right, vars);
+                        if !subs_vars.insert(id.to_string()) {
+                            return Err(Error::new(
+                                id.span(),
+                                "variable substituted multiple times",
+                            ));
+                        }
+                        // Only if we're in the root disjunction branch,
+                        // check whether the substituted Witness value
+                        // actually equals the value it's being substituted
+                        // for.  We can't do this for substitutions in other
+                        // disjunction branches, since it may not be true
+                        // there.
+                        if in_root_disjunction_branch {
+                            codegen.prove_append(quote! {
+                                // It's OK to have a test that observably fails
+                                // for illegal inputs (but is constant time for
+                                // valid inputs)
+                                if #id != #right_tokens {
+                                    return Err(SigmaError::VerificationFailure);
+                                }
+                            });
+                        }
+                        let right = paren_if_needed(*right);
+                        subs.push_back((id, right, used_priv_scalars));
+                    } else {
+                        return Err(Error::new(
+                            right.span(),
+                            format!(
+                                "Unrecognized arithmetic expression in substitution: {} = {}",
+                                id,
+                                quote! {#right}
+                            ),
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        })
+    })?;
 
     // Now apply each substitution to both the StatementTree and also
     // the remaining substitutions
