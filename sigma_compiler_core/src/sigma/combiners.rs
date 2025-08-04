@@ -205,7 +205,7 @@ impl StatementTree {
     /// A _disjunction node_ is an [`Or`](StatementTree::Or) or
     /// [`Thresh`](StatementTree::Thresh) node in the [`StatementTree`].
     ///
-    /// A _disjunction branch_ is a subtree rooted at a non-disjuction
+    /// A _disjunction branch_ is a subtree rooted at a non-disjunction
     /// node that is the child of a disjunction node or at the root of
     /// the [`StatementTree`].
     ///
@@ -402,7 +402,7 @@ impl StatementTree {
     ) -> Result<usize> {
         // We're starting a new branch (and should call the closure) if
         // and only if both is_new_branch is true, and also we're at a
-        // non-disjuction node
+        // non-disjunction node
         match self {
             StatementTree::Leaf(_) | StatementTree::And(_) => {
                 if is_new_branch {
