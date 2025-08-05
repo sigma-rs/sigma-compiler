@@ -524,9 +524,7 @@ impl<'a> CodeGen<'a> {
                     },
                     quote! {
                         Ok(ComposedWitness::Or(vec![
-                            #(CtOption::new(
-                                #witness.map_err(|e| -> SigmaError { e })?,
-                                1u8.into()),)*
+                            #(#witness.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
                 )
