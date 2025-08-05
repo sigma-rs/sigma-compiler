@@ -451,7 +451,7 @@ pub fn enforce_disjunction_invariant(
         // them to the vector.  Otherwise, make a new And node
         // containing the old node and the branch_extra_statements.
         if let StatementTree::And(ref mut stvec) = branch {
-            stvec.append(&mut root_extra_statements);
+            stvec.append(&mut branch_extra_statements);
         } else {
             let old_branch = std::mem::replace(branch, StatementTree::leaf_true());
             branch_extra_statements.push(old_branch);
