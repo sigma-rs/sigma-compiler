@@ -5,3 +5,4 @@ pub use sigma_rs;
 pub use subtle;
 
 pub mod rangeutils;
+pub mod vecutils;

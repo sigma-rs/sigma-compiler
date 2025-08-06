@@ -239,7 +239,7 @@ impl<'a> CodeGen<'a> {
                     }
                     | AExprType::Point { is_vec: true, .. } => {
                         vec_param_vars.insert(id.clone());
-                        Ok(quote! {#instance_var.#id[#vec_index_var]})
+                        Ok(quote! {#instance_var.#id})
                     }
                 })
                 .unwrap();
@@ -293,7 +293,7 @@ impl<'a> CodeGen<'a> {
                                 witnessvec.extend(witness.#id.clone());
                             };
                         }
-                        Ok(quote! {#id[#vec_index_var]})
+                        Ok(quote! { #id })
                     }
                     AExprType::Scalar {
                         is_vec: true,
@@ -301,7 +301,7 @@ impl<'a> CodeGen<'a> {
                         ..
                     } => {
                         vec_param_vars.insert(id.clone());
-                        Ok(quote! {#instance_var.#id[#vec_index_var]})
+                        Ok(quote! {#instance_var.#id})
                     }
                     AExprType::Point { is_vec: false, .. } => {
                         if allocated_vars.insert(id.clone()) {
@@ -335,7 +335,7 @@ impl<'a> CodeGen<'a> {
                                 }
                             };
                         }
-                        Ok(quote! {#id[#vec_index_var]})
+                        Ok(quote! { #id })
                     }
                 })
             else {
@@ -399,18 +399,18 @@ impl<'a> CodeGen<'a> {
             if right_is_vec {
                 eq_code = quote! {
                     #eq_code
-                    let #eq_id = (0..#vec_len_var)
-                        .map(|#vec_index_var| #lr_var.allocate_eq(#right_tokens))
+                    let #eq_id = (#right_tokens)
+                        .iter()
+                        .cloned()
+                        .map(|lr| #lr_var.allocate_eq(lr))
                         .collect::<Vec<_>>();
                 };
                 element_assigns = quote! {
                     #element_assigns
-                    for #vec_index_var in 0..#vec_len_var {
-                        #lr_var.set_element(
-                            #eq_id[#vec_index_var],
-                            #left_tokens,
-                        );
-                    }
+                    (#left_tokens)
+                        .iter()
+                        .zip(#eq_id.iter())
+                        .for_each(|(l,eq)| #lr_var.set_element(*eq, *l));
                 };
             } else {
                 eq_code = quote! {
@@ -729,14 +729,15 @@ impl<'a> CodeGen<'a> {
             #[allow(non_snake_case)]
             pub mod #proto_name {
                 use sigma_compiler::sigma_rs;
+                use sigma_compiler::group::ff::PrimeField;
+                use sigma_compiler::rand::{CryptoRng, RngCore};
+                use sigma_compiler::subtle::CtOption;
+                use sigma_compiler::vecutils::*;
                 use sigma_rs::{
                     composition::{ComposedRelation, ComposedWitness},
                     errors::Error as SigmaError,
                     LinearRelation, Nizk,
                 };
-                use sigma_compiler::rand::{CryptoRng, RngCore};
-                use sigma_compiler::group::ff::PrimeField;
-                use sigma_compiler::subtle::CtOption;
                 use std::ops::Neg;
                 #dump_use
 

@@ -53,19 +53,25 @@ pub fn transform(
                         let idstr = id.to_string();
                         if let Some(TaggedIdent::Scalar(TaggedScalar {
                             is_pub: true,
-                            is_vec: false,
+                            is_vec: l_is_vec,
                             ..
                         })) = vars.get(&idstr)
                         {
                             if let (
                                 AExprType::Scalar {
                                     is_pub: true,
-                                    is_vec: false,
+                                    is_vec: r_is_vec,
                                     ..
                                 },
                                 right_tokens,
                             ) = expr_type_tokens(&vardict, right)?
                             {
+                                if *l_is_vec != r_is_vec {
+                                    return Err(Error::new(
+                                        proc_macro2::Span::call_site(),
+                                        "Only one side of the public equality statement is a vector",
+                                    ));
+                                }
                                 // We found a public Scalar equality
                                 // statement.
                                 if in_root_disjunction_branch {
