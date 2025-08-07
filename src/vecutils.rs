@@ -1,6 +1,7 @@
 //! A module containing some utility functions useful for the runtime
 //! processing of vector operations.
 
+use core::iter::Sum;
 use std::ops::{Add, Mul, Sub};
 
 /// Add two vectors componentwise
@@ -94,4 +95,19 @@ where
     R: Clone,
 {
     right.iter().cloned().map(|r| left.clone() * r).collect()
+}
+
+/// Add the elements of a vector.
+///
+/// This wrapper avoids the problem of the standard
+/// [`sum`](Sum#tymethod.sum) function requiring you to explicitly
+/// specify the output type.  This wrapper gives you whatever type you
+/// get by adding two values of type `T` together.  `T` must be
+/// [`Clone`] because we're adding things of type `T` and not `&T`.
+pub fn sum_vec<T, S>(summable: &[T]) -> S
+where
+    T: Add<T, Output = S> + Clone,
+    S: Sum<T>,
+{
+    summable.iter().cloned().sum()
 }

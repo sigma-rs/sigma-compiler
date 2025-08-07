@@ -84,6 +84,8 @@ use syn::parse_macro_input;
 ///        - the operations `*`, `+`, `-` (binary or unary)
 ///        - the operation `<<` where both operands are expressions with no
 ///          variables
+///        - the function `sum` that takes a single vector argument and
+///          returns the sum of its elements
 ///        - parens
 ///
 ///        You cannot multiply together two private subexpressions, and
@@ -100,7 +102,8 @@ use syn::parse_macro_input;
 ///        statement must be the same, and the statement is proven to
 ///        hold component-wise.  Any non-vector variable in the
 ///        statement is considered equivalent to a vector variable, all
-///        of whose entries have the same value.
+///        of whose entries have the same value.  Note that you can do a
+///        dot product between two vectors `x` and `A` with `sum(x*A)`.
 ///
 ///        As an extension, you can also use an arithmetic expression
 ///        evaluating to a _public_ `Point` in place of `C` on the left

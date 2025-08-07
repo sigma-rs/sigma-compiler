@@ -619,6 +619,34 @@ impl<'a> AExprFold<PedersenExpr> for RecognizeFold<'a> {
         }
     }
 
+    /// Called when summing a vector of `Scalar`s
+    fn sum_scalars(
+        &mut self,
+        _arg: (AExprType, PedersenExpr),
+        _restype: AExprType,
+    ) -> Result<PedersenExpr> {
+        // Sums are never recognized as components of Pedersen
+        // commitments
+        Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "not a component of a Pedersen commitment",
+        ))
+    }
+
+    /// Called when summing a vector of `Point`s
+    fn sum_points(
+        &mut self,
+        _arg: (AExprType, PedersenExpr),
+        _restype: AExprType,
+    ) -> Result<PedersenExpr> {
+        // Sums are never recognized as components of Pedersen
+        // commitments
+        Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "not a component of a Pedersen commitment",
+        ))
+    }
+
     /// Called when subtracting two `Scalar`s
     fn sub_scalars(
         &mut self,
