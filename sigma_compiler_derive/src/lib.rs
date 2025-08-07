@@ -154,6 +154,14 @@ use syn::parse_macro_input;
 ///        typical example.  This is a _not-equals statement_, and it
 ///        means that the value of the expression on the left is not
 ///        equal to the value of the expression on the right.
+///    - Statements can also be combined with `AND(st1,st2,...,stn)` and
+///      `OR(st1,st2,...,stn)`.  The list of statements in the macro
+///      invocation are implicitly put into a top-level `AND`.  `AND`s
+///      and `OR`s can be arbitrarily nested.  As usual, an `AND`
+///      statement is true when all of its component statements are
+///      true; an `OR` statement is true when at least one of its
+///      component statements is true.
+///    
 ///
 /// The macro creates a submodule with the name specified by
 /// `proto_name`.  This module contains:
