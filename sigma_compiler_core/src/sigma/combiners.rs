@@ -846,7 +846,7 @@ mod test {
         let mut output: Vec<(Vec<usize>, StatementTree)> = Vec::new();
         let expected_st: Vec<(Vec<usize>, StatementTree)> = expected
             .iter()
-            .map(|(path, ex)| (path.clone(), StatementTree::parse(&ex).unwrap()))
+            .map(|(path, ex)| (path.clone(), StatementTree::parse(ex).unwrap()))
             .collect();
         let mut st = StatementTree::parse(&e).unwrap();
         st.for_each_disjunction_branch(&mut |db, path| {
@@ -861,7 +861,7 @@ mod test {
         let mut output: Vec<(Vec<usize>, StatementTree)> = Vec::new();
         let expected_st: Vec<(Vec<usize>, StatementTree)> = expected
             .iter()
-            .map(|(path, ex)| (path.clone(), StatementTree::parse(&ex).unwrap()))
+            .map(|(path, ex)| (path.clone(), StatementTree::parse(ex).unwrap()))
             .collect();
         let mut st = StatementTree::parse(&e).unwrap();
         st.for_each_disjunction_branch(&mut |st, path| {
@@ -1197,7 +1197,7 @@ mod test {
                 (
                     path.clone(),
                     vex.iter()
-                        .map(|ex| StatementTree::parse(&ex).unwrap())
+                        .map(|ex| StatementTree::parse(ex).unwrap())
                         .collect(),
                 )
             })
@@ -1225,7 +1225,7 @@ mod test {
                 (
                     path.clone(),
                     vex.iter()
-                        .map(|ex| StatementTree::parse(&ex).unwrap())
+                        .map(|ex| StatementTree::parse(ex).unwrap())
                         .collect(),
                 )
             })

@@ -1752,7 +1752,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = x*A + r*B },
             parse_quote! { x },
             quote! { let out = C; },
@@ -1761,7 +1761,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = x*A + r*B },
             parse_quote! { 2 * x },
             quote! { let out = Scalar::from_u128(2u128) * C; },
@@ -1770,7 +1770,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = x*A + r*B },
             parse_quote! { 2 * x + 12 },
             quote! { let out = (Scalar::from_u128(2u128) * C) +
@@ -1780,7 +1780,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = x*A + r*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) * C) +
@@ -1790,7 +1790,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = 3*x*A + r*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) *
@@ -1802,7 +1802,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = -3*x*A + r*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) *
@@ -1814,7 +1814,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = (-3*x+4+b)*A + r*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) *
@@ -1827,7 +1827,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = (-3*x+4+b)*A + 2*r*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) *
@@ -1841,7 +1841,7 @@ mod test {
 
         convert_commitment_randomness_tester(
             vars,
-            &randoms,
+            randoms,
             parse_quote! { C = (-3*x+4+b)*A + (2*r+c-3)*B },
             parse_quote! { 2 * x + 12 + a },
             quote! { let out = (Scalar::from_u128(2u128) *
