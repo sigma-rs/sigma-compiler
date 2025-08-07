@@ -43,7 +43,7 @@ fn pubscalars_or_vec_test_vecsize_val(
 #[test]
 fn pubscalars_or_vec_test() {
     for vecsize in [0, 1, 2, 20] {
-        pubscalars_or_vec_test_vecsize_val(vecsize, 3).unwrap();
+        pubscalars_or_vec_test_vecsize_val(vecsize, 0).unwrap();
         pubscalars_or_vec_test_vecsize_val(vecsize, 1).unwrap_err();
         pubscalars_or_vec_test_vecsize_val(vecsize, 2).unwrap_err();
         pubscalars_or_vec_test_vecsize_val(vecsize, 3).unwrap();

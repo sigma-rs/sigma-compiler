@@ -9,7 +9,7 @@ fn do_test(x_u128: u128) -> Result<(), sigma_rs::errors::Error> {
     sigma_compiler! { proof,
         (x, rand r),
         (C, const cind A, const cind B),
-        C = 3*x*A + r*B,
+        C = (3*x+1)*A + r*B,
         2*x-5 != 1,
     }
 
@@ -19,7 +19,7 @@ fn do_test(x_u128: u128) -> Result<(), sigma_rs::errors::Error> {
     let B = G::generator();
     let r = Scalar::random(&mut rng);
     let x = Scalar::from_u128(x_u128);
-    let C = (Scalar::from_u128(3) * x) * A + r * B;
+    let C = (Scalar::from_u128(3) * x + Scalar::ONE) * A + r * B;
 
     let instance = proof::Instance { C, A, B };
     let witness = proof::Witness { x, r };
