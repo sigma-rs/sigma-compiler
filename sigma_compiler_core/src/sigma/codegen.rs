@@ -553,10 +553,6 @@ impl<'a> CodeGen<'a> {
         // Flatten nested "And"s into single "And"s
         self.statements.flatten_ands();
 
-        println!("Statements = {{");
-        self.statements.dump();
-        println!("}}");
-
         let mut pub_instance_fields = StructFieldList::default();
         pub_instance_fields.push_vars(self.vars, true);
 

@@ -229,6 +229,18 @@ impl CodeGen {
         };
     }
 
+    /// Extract (as [`String`]s) the code inserted by
+    /// [`prove_append`](Self::prove_append),
+    /// [`verify_append`](Self::verify_append), and
+    /// [`verify_pre_instance_append`](Self::verify_pre_instance_append).
+    pub fn code_strings(&self) -> (String, String, String) {
+        (
+            self.prove_code.to_string(),
+            self.verify_code.to_string(),
+            self.verify_pre_instance_code.to_string(),
+        )
+    }
+
     /// Generate the code to be output by this macro.
     ///
     /// `emit_prover` and `emit_verifier` are as in

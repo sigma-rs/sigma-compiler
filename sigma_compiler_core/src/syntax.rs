@@ -4,6 +4,7 @@ use super::sigma::combiners::StatementTree;
 use super::sigma::types::*;
 use quote::format_ident;
 use std::collections::HashMap;
+use std::fmt;
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
@@ -62,6 +63,24 @@ impl Parse for TaggedScalar {
     }
 }
 
+impl fmt::Display for TaggedScalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut res = String::new();
+        if self.is_pub {
+            res += "pub ";
+        }
+        if self.is_rand {
+            res += "rand ";
+        }
+        if self.is_vec {
+            res += "vec ";
+        }
+        res += &self.id.to_string();
+
+        write!(f, "{res}")
+    }
+}
+
 /// A [`TaggedPoint`] is an [`struct@Ident`] representing a `Point`,
 /// preceded by zero or more of the following tags: `cind`, `const`,
 /// `vec`
@@ -114,6 +133,24 @@ impl Parse for TaggedPoint {
                 }
             }
         }
+    }
+}
+
+impl fmt::Display for TaggedPoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut res = String::new();
+        if self.is_vec {
+            res += "vec ";
+        }
+        if self.is_const {
+            res += "const ";
+        }
+        if self.is_cind {
+            res += "cind ";
+        }
+        res += &self.id.to_string();
+
+        write!(f, "{res}")
     }
 }
 
