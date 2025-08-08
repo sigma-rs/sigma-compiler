@@ -15,9 +15,49 @@ mod pubscalareq;
 mod rangeproof;
 mod substitution;
 mod syntax;
-pub mod transform;
+mod transform;
 
+pub use codegen::CodeGen;
 pub use syntax::{SigmaCompSpec, TaggedIdent, TaggedPoint, TaggedScalar, TaggedVarDict};
+
+use syn::Result;
+
+/// Transform the [`StatementTree`] so that it satisfies the
+/// [disjunction invariant].
+///
+/// [`StatementTree`]: sigma::combiners::StatementTree
+/// [disjunction invariant]: sigma::combiners::StatementTree::check_disjunction_invariant
+pub fn enforce_disjunction_invariant(
+    codegen: &mut CodeGen,
+    spec: &mut SigmaCompSpec,
+) -> Result<()> {
+    transform::enforce_disjunction_invariant(codegen, &mut spec.statements, &mut spec.vars)
+}
+
+/// Apply all of the compiler transformations.
+///
+/// The [disjunction invariant] must be true before calling this
+/// function, and will remain true after each transformation (and at the
+/// end of this function).  Call [enforce_disjunction_invariant] before
+/// calling this function if you're not sure the disjunction invariant
+/// already holds.
+///
+/// [disjunction invariant]: sigma::combiners::StatementTree::check_disjunction_invariant
+pub fn apply_transformations(codegen: &mut CodeGen, spec: &mut SigmaCompSpec) -> Result<()> {
+    // Apply any substitution transformations
+    substitution::transform(codegen, &mut spec.statements, &mut spec.vars)?;
+
+    // Apply any range statement transformations
+    rangeproof::transform(codegen, &mut spec.statements, &mut spec.vars)?;
+
+    // Apply any not-equals statement transformations
+    notequals::transform(codegen, &mut spec.statements, &mut spec.vars)?;
+
+    // Apply any public scalar equality transformations
+    pubscalareq::transform(codegen, &mut spec.statements, &mut spec.vars)?;
+
+    Ok(())
+}
 
 /// The main function of this macro.
 ///
@@ -41,20 +81,11 @@ pub fn sigma_compiler_core(
     // Enforce the disjunction invariant (do this before any other
     // transformations, since they assume the invariant holds, and will
     // maintain it)
-    transform::enforce_disjunction_invariant(&mut codegen, &mut spec.statements, &mut spec.vars)
-        .unwrap();
+    enforce_disjunction_invariant(&mut codegen, spec).unwrap();
 
-    // Apply any substitution transformations
-    substitution::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
+    // Apply the transformations
+    apply_transformations(&mut codegen, spec).unwrap();
 
-    // Apply any range statement transformations
-    rangeproof::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
-
-    // Apply any not-equals statement transformations
-    notequals::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
-
-    // Apply any public scalar equality transformations
-    pubscalareq::transform(&mut codegen, &mut spec.statements, &mut spec.vars).unwrap();
-
+    // Generate the code to be output
     codegen.generate(spec, emit_prover, emit_verifier)
 }

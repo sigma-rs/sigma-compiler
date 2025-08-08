@@ -275,7 +275,7 @@ impl StatementTree {
     ///
     /// If you don't know that your [`StatementTree`] already satisfies
     /// the invariant, call
-    /// [`enforce_disjunction_invariant`](super::super::transform::enforce_disjunction_invariant),
+    /// [`enforce_disjunction_invariant`](super::super::enforce_disjunction_invariant),
     /// which will transform the [`StatementTree`] so that it does (and
     /// also call this
     /// [`check_disjunction_invariant`](StatementTree::check_disjunction_invariant)
