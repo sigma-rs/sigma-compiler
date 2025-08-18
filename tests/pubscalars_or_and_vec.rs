@@ -59,6 +59,26 @@ fn pubscalars_or_vec_test_vecsize_val(
     proof::verify(&instance, &proof, b"pubscalars_vec_test")
 }
 
+fn pubscalars_or_vec_emptyvec() {
+    pubscalars_or_vec_test_vecsize_val(0, 0, Some(0)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 1, Some(0)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 2, Some(0)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 3, Some(0)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 4, Some(0)).unwrap();
+
+    pubscalars_or_vec_test_vecsize_val(0, 0, Some(1)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 1, Some(1)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 2, Some(1)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 3, Some(1)).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 4, Some(1)).unwrap();
+
+    pubscalars_or_vec_test_vecsize_val(0, 0, None).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 1, None).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 2, None).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 3, None).unwrap();
+    pubscalars_or_vec_test_vecsize_val(0, 4, None).unwrap();
+}
+
 fn pubscalars_or_vec_vecsize(vecsize: usize) {
     pubscalars_or_vec_test_vecsize_val(vecsize, 0, Some(0)).unwrap_err();
     pubscalars_or_vec_test_vecsize_val(vecsize, 1, Some(0)).unwrap_err();
@@ -85,7 +105,7 @@ fn pubscalars_or_vec_vecsize(vecsize: usize) {
 
 #[test]
 fn pubscalars_or_and_vec_0_test() {
-    pubscalars_or_vec_vecsize(0);
+    pubscalars_or_vec_emptyvec();
 }
 
 #[test]
