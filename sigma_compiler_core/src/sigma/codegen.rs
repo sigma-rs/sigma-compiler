@@ -434,7 +434,7 @@ impl<'a> CodeGen<'a> {
                     #eq_code
                     #element_assigns
 
-                    Ok(ComposedRelation::from(#lr_var))
+                    Ok(ComposedRelation::try_from(#lr_var).unwrap())
                 }
             },
             quote! {
@@ -462,7 +462,7 @@ impl<'a> CodeGen<'a> {
             // leaf "true")
             StatementTree::Leaf(_) if statement.is_leaf_true() => (
                 quote! {
-                    Ok(ComposedRelation::from(LinearRelation::<Point>::new()))
+                    Ok(ComposedRelation::try_from(LinearRelation::<Point>::new()).unwrap())
                 },
                 quote! {
                     Ok(ComposedWitness::Simple(vec![]))
