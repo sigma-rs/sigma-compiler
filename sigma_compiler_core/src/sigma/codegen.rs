@@ -434,7 +434,7 @@ impl<'a> CodeGen<'a> {
                     #eq_code
                     #element_assigns
 
-                    Ok(ComposedRelation::try_from(#lr_var).unwrap())
+                    SigmaOk(ComposedRelation::try_from(#lr_var).unwrap())
                 }
             },
             quote! {
@@ -442,7 +442,7 @@ impl<'a> CodeGen<'a> {
                     #witness_vec_code
                     let mut witnessvec = Vec::new();
                     #witness_code
-                    Ok(ComposedWitness::Simple(witnessvec))
+                    SigmaOk(ComposedWitness::Simple(witnessvec))
                 }
             },
         )
@@ -497,15 +497,15 @@ impl<'a> CodeGen<'a> {
                             .unzip();
                     (
                         quote! {
-                            Ok(ComposedRelation::and([
-                                #proto_code.map_err(|e| -> SigmaError { e })?,
-                                #(#others_proto.map_err(|e| -> SigmaError { e })?,)*
+                            SigmaOk(ComposedRelation::and([
+                                #proto_code?,
+                                #(#others_proto?,)*
                             ]))
                         },
                         quote! {
-                            Ok(ComposedWitness::and([
-                                #witness_code.map_err(|e| -> SigmaError { e })?,
-                                #(#others_witness.map_err(|e| -> SigmaError { e })?,)*
+                            SigmaOk(ComposedWitness::and([
+                                #witness_code?,
+                                #(#others_witness?,)*
                             ]))
                         },
                     )
@@ -518,13 +518,13 @@ impl<'a> CodeGen<'a> {
                     .unzip();
                 (
                     quote! {
-                        Ok(ComposedRelation::or([
-                            #(#proto.map_err(|e| -> SigmaError { e })?,)*
+                        SigmaOk(ComposedRelation::or([
+                            #(#proto?,)*
                         ]))
                     },
                     quote! {
-                        Ok(ComposedWitness::or([
-                            #(#witness.map_err(|e| -> SigmaError { e })?,)*
+                        SigmaOk(ComposedWitness::or([
+                            #(#witness?,)*
                         ]))
                     },
                 )
@@ -619,7 +619,7 @@ impl<'a> CodeGen<'a> {
             quote! {
                 fn protocol(
                     #instance_var: &Instance,
-                ) -> Result<ComposedRelation<Point>, SigmaError> {
+                ) -> SigmaResult<ComposedRelation<Point>> {
                     #protocol_code
                 }
             }
@@ -631,7 +631,7 @@ impl<'a> CodeGen<'a> {
                 fn protocol_witness(
                     instance: &Instance,
                     witness: &Witness,
-                ) -> Result<ComposedWitness<Point>, SigmaError> {
+                ) -> SigmaResult<ComposedWitness<Point>> {
                     #witness_code
                 }
             }
@@ -665,7 +665,7 @@ impl<'a> CodeGen<'a> {
                     #witness_var: &Witness,
                     #session_id_var: &[u8],
                     #rng_var: &mut (impl CryptoRng + RngCore),
-                ) -> Result<Vec<u8>, SigmaError> {
+                ) -> SigmaResult<Vec<u8>> {
                     #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
@@ -701,7 +701,7 @@ impl<'a> CodeGen<'a> {
                     #instance_var: &Instance,
                     #proof_var: &[u8],
                     #session_id_var: &[u8],
-                ) -> Result<(), SigmaError> {
+                ) -> SigmaResult<()> {
                     #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #nizk_var = #proto_var.into_nizk(#session_id_var);
@@ -732,6 +732,8 @@ impl<'a> CodeGen<'a> {
                 use sigma_rs::{
                     composition::{ComposedRelation, ComposedWitness},
                     errors::Error as SigmaError,
+                    errors::Ok as SigmaOk,
+                    errors::Result as SigmaResult,
                     LinearRelation, Nizk,
                 };
                 use std::ops::Neg;
