@@ -497,13 +497,13 @@ impl<'a> CodeGen<'a> {
                             .unzip();
                     (
                         quote! {
-                            Ok(ComposedRelation::And(vec![
+                            Ok(ComposedRelation::and([
                                 #proto_code.map_err(|e| -> SigmaError { e })?,
                                 #(#others_proto.map_err(|e| -> SigmaError { e })?,)*
                             ]))
                         },
                         quote! {
-                            Ok(ComposedWitness::And(vec![
+                            Ok(ComposedWitness::and([
                                 #witness_code.map_err(|e| -> SigmaError { e })?,
                                 #(#others_witness.map_err(|e| -> SigmaError { e })?,)*
                             ]))
@@ -518,12 +518,12 @@ impl<'a> CodeGen<'a> {
                     .unzip();
                 (
                     quote! {
-                        Ok(ComposedRelation::Or(vec![
+                        Ok(ComposedRelation::or([
                             #(#proto.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
                     quote! {
-                        Ok(ComposedWitness::Or(vec![
+                        Ok(ComposedWitness::or([
                             #(#witness.map_err(|e| -> SigmaError { e })?,)*
                         ]))
                     },
