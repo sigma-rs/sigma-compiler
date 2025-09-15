@@ -1,5 +1,5 @@
 [package]
-name = "sigma_compiler_derive"
+name = "sigma-compiler-derive"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,5 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-sigma_compiler_core = { path = "../sigma_compiler_core" }
+sigma-compiler-core = { path = "../sigma-compiler-core" }
 syn = "2.0"

@@ -1,5 +1,5 @@
 [package]
-name = "sigma_compiler_core"
+name = "sigma-compiler-core"
 version = "0.1.0"
 edition = "2021"
 

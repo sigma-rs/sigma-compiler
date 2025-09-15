@@ -1,10 +1,10 @@
 [package]
-name = "sigma_compiler"
+name = "sigma-compiler"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sigma_compiler_derive = { path = "sigma_compiler_derive" }
+sigma-compiler-derive = { path = "sigma-compiler-derive" }
 group = "0.13"
 rand = "0.8.5"
 sigma-proofs = { path = "dev/sigma-proofs" }
