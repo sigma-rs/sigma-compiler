@@ -4,7 +4,7 @@ use group::Group;
 use sigma_compiler::*;
 
 #[test]
-fn subtract_test() -> Result<(), sigma_rs::errors::Error> {
+fn subtract_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x),
         (C, const cind B),

@@ -4,7 +4,7 @@ use group::ff::PrimeField;
 use group::Group;
 use sigma_compiler::*;
 
-fn pubstatements_vec_test_vecsize(vecsize: usize) -> Result<(), sigma_rs::errors::Error> {
+fn pubstatements_vec_test_vecsize(vecsize: usize) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, pub vec a),
         (vec C, vec D, const cind B),

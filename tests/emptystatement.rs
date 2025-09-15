@@ -3,7 +3,7 @@ use curve25519_dalek::ristretto::RistrettoPoint as G;
 use sigma_compiler::*;
 
 #[test]
-fn emptystatement_test() -> Result<(), sigma_rs::errors::Error> {
+fn emptystatement_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (),
         (),

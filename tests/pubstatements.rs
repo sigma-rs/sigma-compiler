@@ -5,7 +5,7 @@ use group::Group;
 use sigma_compiler::*;
 
 #[test]
-fn pubstatements_test() -> Result<(), sigma_rs::errors::Error> {
+fn pubstatements_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, pub a),
         (C, D, const cind B),

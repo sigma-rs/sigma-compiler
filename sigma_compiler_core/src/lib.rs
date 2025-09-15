@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
 /// The submodules that would be useful to have in the lower-level
-/// `sigma-rs` crate are for now included as submodules of a local
+/// `sigma-proofs` crate are for now included as submodules of a local
 /// `sigma` module.
 pub mod sigma {
     pub mod codegen;

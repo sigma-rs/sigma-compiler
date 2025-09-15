@@ -2,7 +2,7 @@
 //! processing of range statements.
 
 use group::ff::PrimeField;
-use sigma_rs::errors::Error;
+use sigma_proofs::errors::Error;
 use subtle::Choice;
 
 /// Convert a [`Scalar`] to an [`u128`], assuming it fits in an [`i128`]

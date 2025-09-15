@@ -6,7 +6,7 @@ use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
-fn substitution_or_test() -> Result<(), sigma_rs::errors::Error> {
+fn substitution_or_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, z, rand r, rand s),
         (C, D, const cind A, const cind B),

@@ -6,7 +6,7 @@ use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
-fn disj_test() -> Result<(), sigma_rs::errors::Error> {
+fn disj_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, rand r),
         (C, const cind A, const cind B),

@@ -8,7 +8,7 @@ use sigma_compiler::*;
 fn pubscalars_or_vec_test_vecsize_val(
     vecsize: usize,
     b_val: u128,
-) -> Result<(), sigma_rs::errors::Error> {
+) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, pub vec a, pub vec b, rand vec r),
         (vec C, const cind A, const cind B),

@@ -6,7 +6,7 @@ use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
-fn left_expr_test() -> Result<(), sigma_rs::errors::Error> {
+fn left_expr_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, y, pub a, rand r, rand s),
         (C, D, const cind A, const cind B),
@@ -34,7 +34,7 @@ fn left_expr_test() -> Result<(), sigma_rs::errors::Error> {
 }
 
 #[test]
-fn left_expr_vec_test() -> Result<(), sigma_rs::errors::Error> {
+fn left_expr_vec_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, vec y, z, pub vec a, pub b, rand vec r, rand vec s, rand t),
         (vec C, vec D, E, const cind A, const cind B),

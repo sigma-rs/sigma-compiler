@@ -3,7 +3,7 @@ use curve25519_dalek::ristretto::RistrettoPoint as G;
 use group::Group;
 use sigma_compiler::*;
 
-fn dot_product_test_vecsize(vecsize: usize) -> Result<(), sigma_rs::errors::Error> {
+fn dot_product_test_vecsize(vecsize: usize) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, pub vec a),
         (C, D, E, F, vec A, B),

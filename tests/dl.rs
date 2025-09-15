@@ -4,7 +4,7 @@ use group::Group;
 use sigma_compiler::*;
 
 #[test]
-fn dl_zero_test() -> Result<(), sigma_rs::errors::Error> {
+fn dl_zero_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x),
         (C, const B),
@@ -25,7 +25,7 @@ fn dl_zero_test() -> Result<(), sigma_rs::errors::Error> {
 }
 
 #[test]
-fn dl_one_test() -> Result<(), sigma_rs::errors::Error> {
+fn dl_one_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x),
         (C, const B),

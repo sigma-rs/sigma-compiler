@@ -5,7 +5,7 @@ use group::Group;
 use sha2::Sha512;
 use sigma_compiler::*;
 
-fn do_test(x_u128: u128) -> Result<(), sigma_rs::errors::Error> {
+fn do_test(x_u128: u128) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, rand r),
         (C, const cind A, const cind B),

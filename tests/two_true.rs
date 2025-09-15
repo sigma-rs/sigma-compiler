@@ -5,7 +5,7 @@ use sha2::Sha512;
 use sigma_compiler::*;
 
 #[test]
-fn two_true_test() -> Result<(), sigma_rs::errors::Error> {
+fn two_true_test() -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (x, y),
         (C, D, const cind A, const cind B),

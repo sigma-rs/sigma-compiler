@@ -5,7 +5,7 @@ use group::Group;
 use sha2::Sha512;
 use sigma_compiler::*;
 
-fn substitution_vec_test_vecsize(vecsize: usize) -> Result<(), sigma_rs::errors::Error> {
+fn substitution_vec_test_vecsize(vecsize: usize) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, vec y, rand vec r, rand vec s),
         (vec C, vec D, const cind A, const cind B),

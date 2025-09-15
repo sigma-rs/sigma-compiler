@@ -263,30 +263,30 @@ impl CodeGen {
         // vardict contains the variables that were defined in the macro
         // call to [`sigma_compiler`]
         let vardict = taggedvardict_to_vardict(&self.vars);
-        // sigma_rs_vardict contains the variables that we are passing
-        // to sigma_rs.  We may have removed some via substitution, and
+        // sigma_proofs_vardict contains the variables that we are passing
+        // to sigma_proofs.  We may have removed some via substitution, and
         // we may have added some when compiling statements like range
         // assertions into underlying linear combination assertions.
-        let sigma_rs_vardict = taggedvardict_to_vardict(&spec.vars);
+        let sigma_proofs_vardict = taggedvardict_to_vardict(&spec.vars);
 
-        // Generate the code that uses the underlying sigma_rs API
-        let mut sigma_rs_codegen = super::sigma::codegen::CodeGen::new(
+        // Generate the code that uses the underlying sigma_proofs API
+        let mut sigma_proofs_codegen = super::sigma::codegen::CodeGen::new(
             format_ident!("sigma"),
             format_ident!("Point"),
-            &sigma_rs_vardict,
+            &sigma_proofs_vardict,
             &mut spec.statements,
         );
-        let sigma_rs_code = sigma_rs_codegen.generate(emit_prover, emit_verifier);
+        let sigma_proofs_code = sigma_proofs_codegen.generate(emit_prover, emit_verifier);
 
         let mut pub_instance_fields = StructFieldList::default();
         pub_instance_fields.push_vars(&vardict, true);
         let mut witness_fields = StructFieldList::default();
         witness_fields.push_vars(&vardict, false);
 
-        let mut sigma_rs_instance_fields = StructFieldList::default();
-        sigma_rs_instance_fields.push_vars(&sigma_rs_vardict, true);
-        let mut sigma_rs_witness_fields = StructFieldList::default();
-        sigma_rs_witness_fields.push_vars(&sigma_rs_vardict, false);
+        let mut sigma_proofs_instance_fields = StructFieldList::default();
+        sigma_proofs_instance_fields.push_vars(&sigma_proofs_vardict, true);
+        let mut sigma_proofs_witness_fields = StructFieldList::default();
+        sigma_proofs_witness_fields.push_vars(&sigma_proofs_vardict, false);
 
         // Generate the public instance struct definition
         let instance_def = {
@@ -343,8 +343,8 @@ impl CodeGen {
         let prove_func = if emit_prover {
             let instance_ids = pub_instance_fields.field_list();
             let witness_ids = witness_fields.field_list();
-            let sigma_rs_instance_ids = sigma_rs_instance_fields.field_list();
-            let sigma_rs_witness_ids = sigma_rs_witness_fields.field_list();
+            let sigma_proofs_instance_ids = sigma_proofs_instance_fields.field_list();
+            let sigma_proofs_witness_ids = sigma_proofs_witness_fields.field_list();
             let prove_code = &self.prove_code;
             let codegen_instance_var = format_ident!("{}sigma_instance", self.unique_prefix);
             let codegen_witness_var = format_ident!("{}sigma_witness", self.unique_prefix);
@@ -356,12 +356,12 @@ impl CodeGen {
             let sent_instance_code = {
                 let chunks = self.sent_instance.fields.iter().map(|sf| match sf {
                     StructField::Point(id) => quote! {
-                        #proof_var.extend(sigma_rs::serialization::serialize_elements(
+                        #proof_var.extend(sigma_proofs::serialization::serialize_elements(
                             std::slice::from_ref(&#codegen_instance_var.#id)
                         ));
                     },
                     StructField::VecPoint(id) => quote! {
-                        #proof_var.extend(sigma_rs::serialization::serialize_elements(
+                        #proof_var.extend(sigma_proofs::serialization::serialize_elements(
                             &#codegen_instance_var.#id
                         ));
                     },
@@ -393,10 +393,10 @@ impl CodeGen {
                     #prove_code
                     let mut #proof_var = Vec::<u8>::new();
                     let #codegen_instance_var = sigma::Instance {
-                        #sigma_rs_instance_ids
+                        #sigma_proofs_instance_ids
                     };
                     let #codegen_witness_var = sigma::Witness {
-                        #sigma_rs_witness_ids
+                        #sigma_proofs_witness_ids
                     };
                     #sent_instance_code
                     #proof_var.extend(
@@ -417,7 +417,7 @@ impl CodeGen {
         // Generate the verify function
         let verify_func = if emit_verifier {
             let instance_ids = pub_instance_fields.field_list();
-            let sigma_rs_instance_ids = sigma_rs_instance_fields.field_list();
+            let sigma_proofs_instance_ids = sigma_proofs_instance_fields.field_list();
             let verify_pre_instance_code = &self.verify_pre_instance_code;
             let verify_code = &self.verify_code;
             let codegen_instance_var = format_ident!("{}sigma_instance", self.unique_prefix);
@@ -438,14 +438,14 @@ impl CodeGen {
 
                 let chunks = self.sent_instance.fields.iter().map(|sf| match sf {
                     StructField::Point(id) => quote! {
-                        let #id: Point = sigma_rs::serialization::deserialize_elements(
+                        let #id: Point = sigma_proofs::serialization::deserialize_elements(
                                 &#proof_var[#offset_var..],
                                 1,
                             ).ok_or(SigmaError::VerificationFailure)?[0];
                         #offset_var += #element_len_var;
                     },
                     StructField::VecPoint(id) => quote! {
-                        #id = sigma_rs::serialization::deserialize_elements(
+                        #id = sigma_proofs::serialization::deserialize_elements(
                                 &#proof_var[#offset_var..],
                                 #id.len(),
                             ).ok_or(SigmaError::VerificationFailure)?;
@@ -483,7 +483,7 @@ impl CodeGen {
                     #sent_instance_code
                     #verify_code
                     let #codegen_instance_var = sigma::Instance {
-                        #sigma_rs_instance_ids
+                        #sigma_proofs_instance_ids
                     };
                     sigma::verify(
                         &#codegen_instance_var,
@@ -511,15 +511,15 @@ impl CodeGen {
                 use sigma_compiler::group::ff::{Field, PrimeField};
                 use sigma_compiler::group::ff::derive::subtle::ConditionallySelectable;
                 use sigma_compiler::rand::{CryptoRng, RngCore};
-                use sigma_compiler::sigma_rs;
-                use sigma_compiler::sigma_rs::errors::Error as SigmaError;
+                use sigma_compiler::sigma_proofs;
+                use sigma_compiler::sigma_proofs::errors::Error as SigmaError;
                 use sigma_compiler::vecutils::*;
                 use std::ops::Neg;
                 #dump_use
 
                 #group_types
 
-                #sigma_rs_code
+                #sigma_proofs_code
 
                 #instance_def
                 #witness_def

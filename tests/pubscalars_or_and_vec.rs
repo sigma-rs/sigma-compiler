@@ -9,7 +9,7 @@ fn pubscalars_or_vec_test_vecsize_val(
     vecsize: usize,
     b_val: u128,
     x_val: Option<u128>,
-) -> Result<(), sigma_rs::errors::Error> {
+) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x, vec y, pub vec a, pub vec b, rand vec r, rand vec s),
         (vec C, vec D, const cind A, const cind B),

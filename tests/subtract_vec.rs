@@ -5,7 +5,7 @@ use group::Group;
 use sha2::Sha512;
 use sigma_compiler::*;
 
-fn subtract_vec_test_vecsize(vecsize: usize) -> Result<(), sigma_rs::errors::Error> {
+fn subtract_vec_test_vecsize(vecsize: usize) -> sigma_proofs::errors::Result<()> {
     sigma_compiler! { proof,
         (vec x),
         (vec C, vec D, vec E, const cind A, const cind B),
