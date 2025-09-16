@@ -490,7 +490,7 @@ impl StatementTree {
     #[cfg(not(doctest))]
     /// Flatten nested `And` nodes in a [`StatementTree`].
     ///
-    /// The underlying `sigma-rs` crate can share `Scalars` across
+    /// The underlying `sigma-proofs` crate can share `Scalars` across
     /// statements that are direct children of the same `And` node, but
     /// not in nested `And` nodes.
     ///

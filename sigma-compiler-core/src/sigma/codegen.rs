@@ -1,4 +1,4 @@
-//! A module for generating the code that uses the `sigma-rs` crate API.
+//! A module for generating the code that uses the `sigma-proofs` crate API.
 //!
 //! If that crate gets its own macro interface, it can use this module
 //! directly.
@@ -135,7 +135,7 @@ impl StructFieldList {
     }
 }
 
-/// The main struct to handle code generation using the `sigma-rs` API.
+/// The main struct to handle code generation using the `sigma-proofs` API.
 pub struct CodeGen<'a> {
     proto_name: Ident,
     group_name: Ident,
@@ -535,7 +535,7 @@ impl<'a> CodeGen<'a> {
         }
     }
 
-    /// Generate the code that uses the `sigma-rs` API to prove and
+    /// Generate the code that uses the `sigma-proofs` API to prove and
     /// verify the statements in the [`CodeGen`].
     ///
     /// `emit_prover` and `emit_verifier` are as in
@@ -612,7 +612,7 @@ impl<'a> CodeGen<'a> {
 
         let (protocol_code, witness_code) = self.proto_witness_codegen(self.statements);
 
-        // Generate the function that creates the sigma-rs Protocol
+        // Generate the function that creates the sigma-proofs Protocol
         let protocol_func = {
             let instance_var = format_ident!("{}instance", self.unique_prefix);
 
@@ -625,7 +625,7 @@ impl<'a> CodeGen<'a> {
             }
         };
 
-        // Generate the function that creates the sigma-rs ComposedWitness
+        // Generate the function that creates the sigma-proofs ComposedWitness
         let witness_func = if emit_prover {
             quote! {
                 fn protocol_witness(

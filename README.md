@@ -179,7 +179,7 @@ The macro creates a submodule with the name specified by
         witness: &Witness,
         session_id: &[u8],
         rng: &mut (impl CryptoRng + RngCore),
-    ) -> Result<Vec<u8>, sigma_rs::errors::Error>
+    ) -> sigma_proofs::errors::Result<Vec<u8>>
     ```
     The parameter `instance` contains the public variables (also
     known to the verifier).  The parameter `witness` contains the
@@ -196,7 +196,7 @@ The macro creates a submodule with the name specified by
         instance: &Instance,
         proof: &[u8],
         session_id: &[u8],
-    ) -> Result<(), sigma_rs::errors::Error>
+    ) -> sigma_proofs::errors::Result<()>
     ```
     The parameter `instance` contains the public variables, and must
     be the same as passed to the `prove` function.  The parameter
