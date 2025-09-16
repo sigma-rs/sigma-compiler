@@ -1,16 +1,20 @@
 [package]
 name = "sigma-compiler"
-version = "0.1.0"
+version = "0.1.0-rc1"
 edition = "2021"
 license = "MIT"
 
 [dependencies]
-sigma-compiler-derive = { path = "sigma-compiler-derive" }
 group = "0.13"
 rand = "0.8.5"
+sigma-compiler-derive = "0.1.0-rc1"
 sigma-proofs = "0.1.0-sigma"
 subtle = "2.6"
 
 [dev-dependencies]
 curve25519-dalek = { version = "4", features = [ "group", "rand_core", "digest" ] }
 sha2 = "0.10"
+
+[patch.crates-io]
+sigma-compiler-derive = { path = "sigma-compiler-derive" }
+sigma-compiler-core = { path = "sigma-compiler-core" }

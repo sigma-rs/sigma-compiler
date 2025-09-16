@@ -1,6 +1,6 @@
 [package]
 name = "sigma-compiler-derive"
-version = "0.1.0"
+version = "0.1.0-rc1"
 edition = "2021"
 license = "MIT"
 
@@ -8,5 +8,8 @@ license = "MIT"
 proc-macro = true
 
 [dependencies]
-sigma-compiler-core = { path = "../sigma-compiler-core" }
+sigma-compiler-core = "0.1.0-rc1"
 syn = "2.0"
+
+[patch.crates-io]
+sigma-compiler-core = { path = "../sigma-compiler-core" }

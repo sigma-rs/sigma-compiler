@@ -146,7 +146,7 @@ dependencies = [
 
 [[package]]
 name = "sigma-compiler-core"
-version = "0.1.0"
+version = "0.1.0-rc1"
 dependencies = [
  "clap",
  "prettyplease",
