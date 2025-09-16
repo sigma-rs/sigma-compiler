@@ -7,7 +7,7 @@ edition = "2021"
 sigma-compiler-derive = { path = "sigma-compiler-derive" }
 group = "0.13"
 rand = "0.8.5"
-sigma-proofs = { path = "dev/sigma-proofs" }
+sigma-proofs = "0.1.0-sigma"
 subtle = "2.6"
 
 [dev-dependencies]
