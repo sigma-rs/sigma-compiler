@@ -1,3 +1,6 @@
+`sigma-compiler` by Ian Goldberg, iang@uwaterloo.ca  
+Version 0.1.0-rc1, 2025-09-16
+
 This crate provides the `sigma_compiler!` macro as an easy interface
 to the [`sigma-proofs`](https://crates.io/crates/sigma-proofs) API
 for non-interactive zero-knowledge sigma protocols.
