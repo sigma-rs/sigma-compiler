@@ -5,7 +5,7 @@ use syn::parse_macro_input;
 #[cfg(not(doctest))]
 /// The main macro provided by this crate.
 ///
-#[doc = include_str!("../../README.md")]
+#[doc = include_str!("../macro-doc.md")]
 #[proc_macro]
 pub fn sigma_compiler(input: TokenStream) -> TokenStream {
     let mut spec = parse_macro_input!(input as SigmaCompSpec);
