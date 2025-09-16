@@ -3,6 +3,8 @@ name = "sigma-compiler-core"
 version = "0.1.0-rc1"
 edition = "2021"
 license = "MIT"
+repository = "https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler"
+description = "Core functionality for the macros in the sigma-compiler crate"
 
 [dependencies]
 syn = { version = "2.0", features = ["extra-traits", "visit", "visit-mut", "full"] }

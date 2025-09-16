@@ -3,6 +3,8 @@ name = "sigma-compiler"
 version = "0.1.0-rc1"
 edition = "2021"
 license = "MIT"
+repository = "https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler"
+description = "Crate for automatically generating code for sigma zero-knowledge proof protocols of more complex statements than are supported by the sigma-proofs crate.  The statements given to this crate are compiled into statements about linear combinations of points, and transformed into the sigma-proofs API."
 
 [dependencies]
 group = "0.13"

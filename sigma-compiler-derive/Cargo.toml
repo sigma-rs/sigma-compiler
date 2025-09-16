@@ -3,6 +3,8 @@ name = "sigma-compiler-derive"
 version = "0.1.0-rc1"
 edition = "2021"
 license = "MIT"
+repository = "https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler"
+description = "Derive macros for the sigma-compiler crate"
 
 [lib]
 proc-macro = true
