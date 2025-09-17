@@ -724,6 +724,7 @@ impl<'a> CodeGen<'a> {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use super::sigma_compiler;
                 use sigma_compiler::sigma_proofs;
                 use sigma_compiler::group::ff::PrimeField;
                 use sigma_compiler::rand::{CryptoRng, RngCore};

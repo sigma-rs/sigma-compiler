@@ -507,6 +507,7 @@ impl CodeGen {
         quote! {
             #[allow(non_snake_case)]
             pub mod #proto_name {
+                use super::sigma_compiler;
                 use sigma_compiler::group::Group;
                 use sigma_compiler::group::ff::{Field, PrimeField};
                 use sigma_compiler::group::ff::derive::subtle::ConditionallySelectable;
