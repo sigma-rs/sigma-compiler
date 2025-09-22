@@ -3,7 +3,7 @@ use sigma_compiler_core::{sigma_compiler_core, SigmaCompSpec};
 use syn::parse_macro_input;
 
 #[cfg(not(doctest))]
-/// The main macro provided by this crate.
+/// The main macro provided by the `sigma_compiler` crate.
 ///
 #[doc = include_str!("../macro-doc.md")]
 #[proc_macro]
