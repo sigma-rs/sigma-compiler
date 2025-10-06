@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -e
+
+git pull https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler main --tags
+git push origin main --tags
