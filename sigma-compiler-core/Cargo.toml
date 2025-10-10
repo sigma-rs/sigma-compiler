@@ -1,6 +1,6 @@
 [package]
 name = "sigma-compiler-core"
-version = "0.1.0-rc2"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 repository = "https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler"

@@ -1,6 +1,6 @@
 [package]
 name = "sigma-compiler"
-version = "0.1.0-rc2"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 repository = "https://git-crysp.uwaterloo.ca/SigmaProtocol/sigma-compiler"
@@ -9,7 +9,7 @@ description = "Crate for automatically generating code for sigma zero-knowledge 
 [dependencies]
 group = "0.13"
 rand = "0.8.5"
-sigma-compiler-derive = "0.1.0-rc2"
+sigma-compiler-derive = "0.1.0"
 sigma-proofs = "0.1.0-sigma"
 subtle = "2.6"
 
