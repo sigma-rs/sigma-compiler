@@ -380,8 +380,8 @@ impl CodeGen {
             let dumper = if cfg!(feature = "dump") {
                 quote! {
                     sigma_compiler::dumper::dump(
-                        &format!("sigma_compiler prover instance = {{\n{:?}}}\n",
-                            #instance_var));
+                        &format!("{} sigma_compiler prover instance = {{\n{:?}}}\n",
+                            stringify!(#proto_name), #instance_var));
                 }
             } else {
                 quote! {}
@@ -390,8 +390,8 @@ impl CodeGen {
             let sigma_dumper = if cfg!(feature = "dump") {
                 quote! {
                     sigma_compiler::dumper::dump(
-                        &format!("sigma prover instance = {{\n{:?}}}\n",
-                            #codegen_instance_var));
+                        &format!("{} sigma prover instance = {{\n{:?}}}\n",
+                            stringify!(#proto_name), #codegen_instance_var));
                 }
             } else {
                 quote! {}
@@ -482,8 +482,8 @@ impl CodeGen {
             let dumper = if cfg!(feature = "dump") {
                 quote! {
                     sigma_compiler::dumper::dump(
-                        &format!("sigma_compiler verifier instance = {{\n{:?}}}\n",
-                            #instance_var));
+                        &format!("{} sigma_compiler verifier instance = {{\n{:?}}}\n",
+                            stringify!(#proto_name), #instance_var));
                 }
             } else {
                 quote! {}
@@ -492,8 +492,8 @@ impl CodeGen {
             let sigma_dumper = if cfg!(feature = "dump") {
                 quote! {
                     sigma_compiler::dumper::dump(
-                        &format!("sigma verifier instance = {{\n{:?}}}\n",
-                            #codegen_instance_var));
+                        &format!("{} sigma verifier instance = {{\n{:?}}}\n",
+                            stringify!(#proto_name), #codegen_instance_var));
                 }
             } else {
                 quote! {}
