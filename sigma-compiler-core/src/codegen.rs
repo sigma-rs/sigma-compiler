@@ -293,21 +293,28 @@ impl CodeGen {
             let decls = pub_instance_fields.field_decls();
             #[cfg(feature = "dump")]
             let dump_impl = {
-                let dump_chunks = pub_instance_fields.dump();
+                let dump_chunks = pub_instance_fields.dump(&format_ident!("fmt"));
                 quote! {
                     impl Instance {
-                        fn dump_scalar(s: &Scalar) {
+                        fn dump_scalar(s: &Scalar, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &s.to_repr();
-                            print!("{:02x?}", bytes);
+                            for b in bytes.iter().rev() {
+                                write!(fmt, "{:02x}", b);
+                            }
                         }
 
-                        fn dump_point(p: &Point) {
+                        fn dump_point(p: &Point, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &p.to_bytes();
-                            print!("{:02x?}", bytes);
+                            for b in bytes.iter().rev() {
+                                write!(fmt, "{:02x}", b);
+                            }
                         }
+                    }
 
-                        pub fn dump(&self) {
+                    impl std::fmt::Debug for Instance {
+                        fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                             #dump_chunks
+                            Ok(())
                         }
                     }
                 }
@@ -372,9 +379,19 @@ impl CodeGen {
 
             let dumper = if cfg!(feature = "dump") {
                 quote! {
-                    println!("prover instance = {{");
-                    #instance_var.dump();
-                    println!("}}");
+                    sigma_compiler::dumper::dump(
+                        &format!("sigma_compiler prover instance = {{\n{:?}}}\n",
+                            #instance_var));
+                }
+            } else {
+                quote! {}
+            };
+
+            let sigma_dumper = if cfg!(feature = "dump") {
+                quote! {
+                    sigma_compiler::dumper::dump(
+                        &format!("sigma prover instance = {{\n{:?}}}\n",
+                            #codegen_instance_var));
                 }
             } else {
                 quote! {}
@@ -399,6 +416,7 @@ impl CodeGen {
                         #sigma_proofs_witness_ids
                     };
                     #sent_instance_code
+                    #sigma_dumper
                     #proof_var.extend(
                         sigma::prove(
                             &#codegen_instance_var,
@@ -463,9 +481,19 @@ impl CodeGen {
 
             let dumper = if cfg!(feature = "dump") {
                 quote! {
-                    println!("verifier instance = {{");
-                    #instance_var.dump();
-                    println!("}}");
+                    sigma_compiler::dumper::dump(
+                        &format!("sigma_compiler verifier instance = {{\n{:?}}}\n",
+                            #instance_var));
+                }
+            } else {
+                quote! {}
+            };
+
+            let sigma_dumper = if cfg!(feature = "dump") {
+                quote! {
+                    sigma_compiler::dumper::dump(
+                        &format!("sigma verifier instance = {{\n{:?}}}\n",
+                            #codegen_instance_var));
                 }
             } else {
                 quote! {}
@@ -485,6 +513,7 @@ impl CodeGen {
                     let #codegen_instance_var = sigma::Instance {
                         #sigma_proofs_instance_ids
                     };
+                    #sigma_dumper
                     sigma::verify(
                         &#codegen_instance_var,
                         &#proof_var[#offset_var..],

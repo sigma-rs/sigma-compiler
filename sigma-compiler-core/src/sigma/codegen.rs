@@ -62,36 +62,37 @@ impl StructFieldList {
         }
     }
     #[cfg(feature = "dump")]
-    /// Output a ToTokens of the contents of the fields
-    pub fn dump(&self) -> impl ToTokens {
+    /// Output a ToTokens of code to dump the contents of the fields to
+    /// the `std::fmt::Formatter` with the given `fmt_id`
+    pub fn dump(&self, fmt_id: &Ident) -> impl ToTokens {
         let dump_chunks = self.fields.iter().map(|f| match f {
             StructField::Scalar(id) => quote! {
-                print!("  {}: ", stringify!(#id));
-                Instance::dump_scalar(&self.#id);
-                println!("");
+                write!(#fmt_id, "  {}: ", stringify!(#id));
+                Instance::dump_scalar(&self.#id, #fmt_id);
+                write!(#fmt_id, ",\n");
             },
             StructField::VecScalar(id) => quote! {
-                print!("  {}: [", stringify!(#id));
+                write!(#fmt_id, "  {}: [\n", stringify!(#id));
                 for s in self.#id.iter() {
-                    print!("    ");
-                    Instance::dump_scalar(s);
-                    println!(",");
+                    write!(#fmt_id, "    ");
+                    Instance::dump_scalar(s, #fmt_id);
+                    write!(#fmt_id, ",\n");
                 }
-                println!("  ]");
+                write!(#fmt_id, "  ],\n");
             },
             StructField::Point(id) => quote! {
-                print!("  {}: ", stringify!(#id));
-                Instance::dump_point(&self.#id);
-                println!("");
+                write!(#fmt_id, "  {}: ", stringify!(#id));
+                Instance::dump_point(&self.#id, #fmt_id);
+                write!(#fmt_id, ",\n");
             },
             StructField::VecPoint(id) => quote! {
-                print!("  {}: [", stringify!(#id));
+                write!(#fmt_id, "  {}: [\n", stringify!(#id));
                 for p in self.#id.iter() {
-                    print!("    ");
-                    Instance::dump_point(p);
-                    println!(",");
+                    write!(#fmt_id, "    ");
+                    Instance::dump_point(p, #fmt_id);
+                    write!(#fmt_id, ",\n");
                 }
-                println!("  ]");
+                write!(#fmt_id, "  ],\n");
             },
         });
         quote! { #(#dump_chunks)* }
@@ -561,21 +562,28 @@ impl<'a> CodeGen<'a> {
             let decls = pub_instance_fields.field_decls();
             #[cfg(feature = "dump")]
             let dump_impl = {
-                let dump_chunks = pub_instance_fields.dump();
+                let dump_chunks = pub_instance_fields.dump(&format_ident!("fmt"));
                 quote! {
                     impl Instance {
-                        fn dump_scalar(s: &Scalar) {
+                        fn dump_scalar(s: &Scalar, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &s.to_repr();
-                            print!("{:02x?}", bytes);
+                            for b in bytes.iter().rev() {
+                                write!(fmt, "{:02x}", b);
+                            }
                         }
 
-                        fn dump_point(p: &Point) {
+                        fn dump_point(p: &Point, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &p.to_bytes();
-                            print!("{:02x?}", bytes);
+                            for b in bytes.iter().rev() {
+                                write!(fmt, "{:02x}", b);
+                            }
                         }
+                    }
 
-                        pub fn dump(&self) {
+                    impl std::fmt::Debug for Instance {
+                        fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                             #dump_chunks
+                            Ok(())
                         }
                     }
                 }
@@ -649,16 +657,6 @@ impl<'a> CodeGen<'a> {
             let proto_witness_var = format_ident!("{}proto_witness", self.unique_prefix);
             let nizk_var = format_ident!("{}nizk", self.unique_prefix);
 
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("prover instance = {{");
-                    #instance_var.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
-
             quote! {
                 pub fn prove(
                     #instance_var: &Instance,
@@ -666,7 +664,6 @@ impl<'a> CodeGen<'a> {
                     #session_id_var: &[u8],
                     #rng_var: &mut (impl CryptoRng + RngCore),
                 ) -> SigmaResult<Vec<u8>> {
-                    #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
                     let #nizk_var = #proto_var.into_nizk(#session_id_var);
@@ -686,23 +683,12 @@ impl<'a> CodeGen<'a> {
             let proto_var = format_ident!("{}proto", self.unique_prefix);
             let nizk_var = format_ident!("{}nizk", self.unique_prefix);
 
-            let dumper = if cfg!(feature = "dump") {
-                quote! {
-                    println!("verifier instance = {{");
-                    #instance_var.dump();
-                    println!("}}");
-                }
-            } else {
-                quote! {}
-            };
-
             quote! {
                 pub fn verify(
                     #instance_var: &Instance,
                     #proof_var: &[u8],
                     #session_id_var: &[u8],
                 ) -> SigmaResult<()> {
-                    #dumper
                     let #proto_var = protocol(#instance_var)?;
                     let #nizk_var = #proto_var.into_nizk(#session_id_var);
 
