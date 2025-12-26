@@ -8,3 +8,5 @@ pub use subtle;
 
 pub mod rangeutils;
 pub mod vecutils;
+#[cfg(feature = "dump")]
+pub mod dumper;
