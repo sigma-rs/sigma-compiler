@@ -11,11 +11,23 @@ use std::collections::HashSet;
 use syn::{Expr, Ident};
 
 /// Names and types of fields that might end up in a generated struct
+#[derive(Clone)]
 pub enum StructField {
     Scalar(Ident),
     VecScalar(Ident),
     Point(Ident),
     VecPoint(Ident),
+}
+
+impl StructField {
+    /// Extract the [`struct@Ident`] from the [`StructField`]
+    pub fn ident(&self) -> Ident {
+        match self {
+            Self::Scalar(id) | Self::VecScalar(id) | Self::Point(id) | Self::VecPoint(id) => {
+                id.clone()
+            }
+        }
+    }
 }
 
 /// A list of StructField items
@@ -65,7 +77,11 @@ impl StructFieldList {
     /// Output a ToTokens of code to dump the contents of the fields to
     /// the `std::fmt::Formatter` with the given `fmt_id`
     pub fn dump(&self, fmt_id: &Ident) -> impl ToTokens {
-        let dump_chunks = self.fields.iter().map(|f| match f {
+        // Sort the field ids
+        let mut fields = self.fields.clone();
+        fields.sort_by_key(|f| f.ident());
+
+        let dump_chunks = fields.iter().map(|f| match f {
             StructField::Scalar(id) => quote! {
                 write!(#fmt_id, "  {}: ", stringify!(#id));
                 Instance::dump_scalar(&self.#id, #fmt_id);
