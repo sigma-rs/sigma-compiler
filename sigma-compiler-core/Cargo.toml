@@ -14,7 +14,8 @@ clap = { version = "4.5", features = ["derive"] }
 prettyplease = "0.2"
 
 [features]
-# Dump (to stdout) the value of the instance on both the prover's and
-# verifier's side.  They should match.
+# Dump (to stdout or to a string) the value of the instance on both the
+# prover's and verifier's side.  They should match.
+# Note: enable this feature (if you want it) in the sigma-compiler
+# crate, not here.
 dump = []
-# default = ["dump"]

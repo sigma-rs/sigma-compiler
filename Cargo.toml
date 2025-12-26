@@ -17,6 +17,12 @@ subtle = "2.6"
 curve25519-dalek = { version = "4", features = [ "group", "rand_core", "digest" ] }
 sha2 = "0.10"
 
+[features]
+# Dump (to stdout or to a string) the value of the instance on both the
+# prover's and verifier's side.  They should match.
+dump = [ "sigma-compiler-derive/dump" ]
+# default = ["dump"]
+
 [patch.crates-io]
 sigma-compiler-derive = { path = "sigma-compiler-derive" }
 sigma-compiler-core = { path = "sigma-compiler-core" }
