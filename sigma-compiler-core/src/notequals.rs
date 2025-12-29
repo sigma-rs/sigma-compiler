@@ -11,8 +11,8 @@
 
 use super::codegen::CodeGen;
 use super::pedersen::{
-    convert_commitment, convert_randomness, recognize_linscalar, recognize_pedersen_assignment,
-    recognize_pubscalar, unique_random_scalars, LinScalar, PedersenAssignment,
+    convert_commitment, convert_randomness, random_scalars, recognize_linscalar,
+    recognize_pedersen_assignment, recognize_pubscalar, LinScalar, PedersenAssignment,
 };
 use super::sigma::combiners::*;
 use super::sigma::types::{expr_type_tokens, VarDict};
@@ -21,6 +21,7 @@ use super::transform::paren_if_needed;
 use super::TaggedVarDict;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
+use syn::spanned::Spanned;
 use syn::{parse_quote, Error, Expr, Ident, Result};
 
 /// Subtract the Expr `subexpr` (with constant value `subval`, if
@@ -81,8 +82,8 @@ pub fn transform(
     // Make the VarDict version of the variable dictionary
     let mut vardict = taggedvardict_to_vardict(vars);
 
-    // A HashSet of the unique random Scalars in the macro input
-    let mut randoms = unique_random_scalars(vars, st);
+    // A HashSet of the random Scalars in the macro input
+    let mut randoms = random_scalars(vars, st);
 
     // Gather mutable references to all of the leaves of the
     // StatementTree.  Note that this ignores the combiner structure in
@@ -129,6 +130,19 @@ pub fn transform(
             continue;
         };
         neq_stmt_index += 1;
+
+        // The variable in the not-equals statement must not be tagged "rand"
+        if let Some(super::TaggedIdent::Scalar(super::TaggedScalar {
+            is_pub: false,
+            is_rand: true,
+            ..
+        })) = vars.get(&neq_linscalar.id.to_string())
+        {
+            return Err(Error::new(
+                leafexpr.span(),
+                "target of not-equals expression cannot be rand",
+            ));
+        }
 
         // We will transform the not-equals statement into a list of
         // basic linear combination statements that will be ANDed

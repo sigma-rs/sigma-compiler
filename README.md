@@ -39,8 +39,8 @@ The pieces are as follows:
       value other than what is implied by the truth of the
       statements.
     - `rand` means that the `Scalar` is a uniform random `Scalar`.
-      A `rand` `Scalar` must be used only once in the statements.
-      These are typically used as randomizers in Pedersen
+      A `rand` `Scalar` may not be used in range or not-equals
+      statements.  These are typically used as randomizers in Pedersen
       commitments.
     - `vec` means that the variable represents a vector of
       `Scalar`s, as opposed to a single `Scalar`.  The number of

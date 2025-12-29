@@ -5,7 +5,7 @@
 
 use super::codegen::CodeGen;
 use super::pedersen::{
-    convert_commitment, convert_randomness, recognize_pedersen_assignment, unique_random_scalars,
+    convert_commitment, convert_randomness, random_scalars, recognize_pedersen_assignment,
     LinScalar, PedersenAssignment,
 };
 use super::sigma::combiners::*;
@@ -132,8 +132,8 @@ pub fn enforce_disjunction_invariant(
     // Make the VarDict version of the variable dictionary
     let mut vardict = taggedvardict_to_vardict(vars);
 
-    // A HashSet of the unique random Scalars in the macro input
-    let mut randoms = unique_random_scalars(vars, st);
+    // A HashSet of the random Scalars in the macro input
+    let mut randoms = random_scalars(vars, st);
 
     // A list of the computationally independent (non-vector) Points in
     // the macro input.  If we need to do any transformations, there
