@@ -140,14 +140,7 @@ pub fn enforce_disjunction_invariant(
     // must be at least two of them in order to create Pedersen
     // commitments.
 
-    // If we're testing, sort cind_points so that we get a deterministic
-    // choice of cind_A and cind_B
-    #[cfg(not(test))]
     let cind_points = collect_cind_points(vars);
-    #[cfg(test)]
-    let mut cind_points = collect_cind_points(vars);
-    #[cfg(test)]
-    cind_points.sort_unstable();
 
     // Extra statements to be added to the root disjunction branch
     let mut root_extra_statements: Vec<StatementTree> = Vec::new();

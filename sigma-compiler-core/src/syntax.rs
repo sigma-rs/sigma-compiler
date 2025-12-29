@@ -197,7 +197,7 @@ pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
 /// Collect the list of [`Point`](TaggedIdent::Point)s tagged `cind`
 /// from the given [`TaggedVarDict`]
 pub fn collect_cind_points(vars: &TaggedVarDict) -> Vec<Ident> {
-    vars.values()
+    let mut cind_points: Vec<Ident> = vars.values()
         .filter_map(|ti| {
             if let TaggedIdent::Point(TaggedPoint {
                 is_cind: true,
@@ -211,7 +211,9 @@ pub fn collect_cind_points(vars: &TaggedVarDict) -> Vec<Ident> {
                 None
             }
         })
-        .collect()
+        .collect();
+    cind_points.sort();
+    cind_points
 }
 
 #[cfg(test)]
