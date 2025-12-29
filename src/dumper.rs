@@ -28,7 +28,11 @@ pub fn dump_buffer() -> String {
 pub fn dump(s: &str) {
     let mut b = DUMP_BUFFER.lock().unwrap();
     match *b {
-        None => { print!("{}", s); }
-        Some(ref mut buf) => { buf.push_str(s); }
+        None => {
+            print!("{}", s);
+        }
+        Some(ref mut buf) => {
+            buf.push_str(s);
+        }
     }
 }

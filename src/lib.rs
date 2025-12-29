@@ -6,7 +6,7 @@ pub use sigma_compiler_derive::{sigma_compiler, sigma_compiler_prover, sigma_com
 pub use sigma_proofs;
 pub use subtle;
 
-pub mod rangeutils;
-pub mod vecutils;
 #[cfg(feature = "dump")]
 pub mod dumper;
+pub mod rangeutils;
+pub mod vecutils;
