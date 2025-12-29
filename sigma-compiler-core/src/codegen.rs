@@ -299,14 +299,20 @@ impl CodeGen {
                         fn dump_scalar(s: &Scalar, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &s.to_repr();
                             for b in bytes.iter().rev() {
-                                write!(fmt, "{:02x}", b);
+                                // It's not a big deal if writes fail
+                                // here, so we use "ok()" to ignore the
+                                // `Result`
+                                write!(fmt, "{:02x}", b).ok();
                             }
                         }
 
                         fn dump_point(p: &Point, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &p.to_bytes();
                             for b in bytes.iter().rev() {
-                                write!(fmt, "{:02x}", b);
+                                // It's not a big deal if writes fail
+                                // here, so we use "ok()" to ignore the
+                                // `Result`
+                                write!(fmt, "{:02x}", b).ok();
                             }
                         }
                     }

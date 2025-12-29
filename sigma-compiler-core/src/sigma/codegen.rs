@@ -82,33 +82,35 @@ impl StructFieldList {
         fields.sort_by_key(|f| f.ident());
 
         let dump_chunks = fields.iter().map(|f| match f {
+            // It's not a big deal if writes fail here, so we use "ok()"
+            // to ignore the `Result`
             StructField::Scalar(id) => quote! {
-                write!(#fmt_id, "  {}: ", stringify!(#id));
+                write!(#fmt_id, "  {}: ", stringify!(#id)).ok();
                 Instance::dump_scalar(&self.#id, #fmt_id);
-                write!(#fmt_id, ",\n");
+                write!(#fmt_id, ",\n").ok();
             },
             StructField::VecScalar(id) => quote! {
-                write!(#fmt_id, "  {}: [\n", stringify!(#id));
+                write!(#fmt_id, "  {}: [\n", stringify!(#id)).ok();
                 for s in self.#id.iter() {
-                    write!(#fmt_id, "    ");
+                    write!(#fmt_id, "    ").ok();
                     Instance::dump_scalar(s, #fmt_id);
-                    write!(#fmt_id, ",\n");
+                    write!(#fmt_id, ",\n").ok();
                 }
-                write!(#fmt_id, "  ],\n");
+                write!(#fmt_id, "  ],\n").ok();
             },
             StructField::Point(id) => quote! {
-                write!(#fmt_id, "  {}: ", stringify!(#id));
+                write!(#fmt_id, "  {}: ", stringify!(#id)).ok();
                 Instance::dump_point(&self.#id, #fmt_id);
-                write!(#fmt_id, ",\n");
+                write!(#fmt_id, ",\n").ok();
             },
             StructField::VecPoint(id) => quote! {
-                write!(#fmt_id, "  {}: [\n", stringify!(#id));
+                write!(#fmt_id, "  {}: [\n", stringify!(#id)).ok();
                 for p in self.#id.iter() {
-                    write!(#fmt_id, "    ");
+                    write!(#fmt_id, "    ").ok();
                     Instance::dump_point(p, #fmt_id);
-                    write!(#fmt_id, ",\n");
+                    write!(#fmt_id, ",\n").ok();
                 }
-                write!(#fmt_id, "  ],\n");
+                write!(#fmt_id, "  ],\n").ok();
             },
         });
         quote! { #(#dump_chunks)* }
@@ -584,14 +586,20 @@ impl<'a> CodeGen<'a> {
                         fn dump_scalar(s: &Scalar, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &s.to_repr();
                             for b in bytes.iter().rev() {
-                                write!(fmt, "{:02x}", b);
+                                // It's not a big deal if writes fail
+                                // here, so we use "ok()" to ignore the
+                                // `Result`
+                                write!(fmt, "{:02x}", b).ok();
                             }
                         }
 
                         fn dump_point(p: &Point, fmt: &mut std::fmt::Formatter<'_>) {
                             let bytes: &[u8] = &p.to_bytes();
                             for b in bytes.iter().rev() {
-                                write!(fmt, "{:02x}", b);
+                                // It's not a big deal if writes fail
+                                // here, so we use "ok()" to ignore the
+                                // `Result`
+                                write!(fmt, "{:02x}", b).ok();
                             }
                         }
                     }
