@@ -154,13 +154,14 @@ The pieces are as follows:
        typical example.  This is a _not-equals statement_, and it
        means that the value of the expression on the left is not
        equal to the value of the expression on the right.
-   - Statements can also be combined with `AND(st1,st2,...,stn)` and
-     `OR(st1,st2,...,stn)`.  The list of statements in the macro
-     invocation are implicitly put into a top-level `AND`.  `AND`s
-     and `OR`s can be arbitrarily nested.  As usual, an `AND`
-     statement is true when all of its component statements are
-     true; an `OR` statement is true when at least one of its
-     component statements is true.
+   - Statements can also be combined with `AND(st1,st2,...,stn)`,
+     `OR(st1,st2,...,stn)`, or `THRESH(t,st1,st2,...,stn)`.  The list of
+     statements in the macro invocation are implicitly put into a
+     top-level `AND`.  `AND`s, `OR`s, and `THRESH`s can be arbitrarily
+     nested.  As usual, an `AND` statement is true when all of its
+     component statements are true; an `OR` statement is true when at
+     least one of its component statements is true; a `THRESH` statement
+     is true when at least `t` of its component statements are true.
    
 
 The macro creates a submodule with the name specified by

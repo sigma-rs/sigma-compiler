@@ -548,8 +548,23 @@ impl<'a> CodeGen<'a> {
                     },
                 )
             }
-            StatementTree::Thresh(_thresh, _stvec) => {
-                todo! {"Thresh not yet implemented"};
+            StatementTree::Thresh(thresh, stvec) => {
+                let (proto, witness): (Vec<TokenStream>, Vec<TokenStream>) = stvec
+                    .iter()
+                    .map(|st| self.proto_witness_codegen(st))
+                    .unzip();
+                (
+                    quote! {
+                        SigmaOk(ComposedRelation::threshold(#thresh, [
+                            #(#proto?,)*
+                        ]))
+                    },
+                    quote! {
+                        SigmaOk(ComposedWitness::threshold([
+                            #(#witness?,)*
+                        ]))
+                    },
+                )
             }
         }
     }
