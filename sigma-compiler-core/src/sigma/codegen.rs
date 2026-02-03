@@ -707,7 +707,7 @@ impl<'a> CodeGen<'a> {
                     let #proto_witness_var = protocol_witness(#instance_var, #witness_var)?;
                     let #nizk_var = #proto_var.into_nizk(#session_id_var);
 
-                    #nizk_var.prove_batchable(&#proto_witness_var, #rng_var)
+                    #nizk_var.prove_compact(&#proto_witness_var, #rng_var)
                 }
             }
         } else {
@@ -731,7 +731,7 @@ impl<'a> CodeGen<'a> {
                     let #proto_var = protocol(#instance_var)?;
                     let #nizk_var = #proto_var.into_nizk(#session_id_var);
 
-                    #nizk_var.verify_batchable(#proof_var)
+                    #nizk_var.verify_compact(#proof_var)
                 }
             }
         } else {
