@@ -38,7 +38,10 @@ impl StructFieldList {
         self.fields.push(StructField::VecPoint(s.clone()));
     }
     pub fn push_vars(&mut self, vars: &VarDict, for_instance: bool) {
-        for (id, ti) in vars.iter() {
+        let mut entries: Vec<_> = vars.iter().collect();
+        entries.sort_by_key(|(id, _)| *id);
+
+        for (id, ti) in entries {
             match ti {
                 AExprType::Scalar { is_pub, is_vec, .. } => {
                     if *is_pub == for_instance {
@@ -354,8 +357,10 @@ impl<'a> CodeGen<'a> {
                 let expr_str = quote! { #expr }.to_string();
                 panic!("Only one side of = is a vector expression: {expr_str}");
             }
-            let vec_param_varvec = Vec::from_iter(vec_param_vars);
-            let vec_witness_varvec = Vec::from_iter(vec_witness_vars);
+            let mut vec_param_varvec = Vec::from_iter(vec_param_vars);
+            vec_param_varvec.sort_by_key(|id| id.to_string());
+            let mut vec_witness_varvec = Vec::from_iter(vec_witness_vars);
+            vec_witness_varvec.sort_by_key(|id| id.to_string());
 
             if !vec_param_varvec.is_empty() {
                 let firstvar = &vec_param_varvec[0];

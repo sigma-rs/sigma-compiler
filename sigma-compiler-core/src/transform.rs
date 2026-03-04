@@ -147,7 +147,7 @@ pub fn enforce_disjunction_invariant(
     #[cfg(test)]
     let mut cind_points = collect_cind_points(vars);
     #[cfg(test)]
-    cind_points.sort_unstable();
+    cind_points.sort();
 
     // Extra statements to be added to the root disjunction branch
     let mut root_extra_statements: Vec<StatementTree> = Vec::new();
@@ -192,10 +192,11 @@ pub fn enforce_disjunction_invariant(
     // Make a HashSet of any of those private Scalars whose count is
     // strictly larger than 1.  (Those private Scalars are the ones
     // that are in violation of the disjunction invariant.)
-    let mut invariant_violators: HashSet<Ident> = branch_count
+    let mut invariant_violators: Vec<Ident> = branch_count
         .drain()
         .filter_map(|(id, n)| if n > 1 { Some(id) } else { None })
         .collect();
+    invariant_violators.sort_by_key(|id| id.to_string());
 
     // If there are no invariant violators, we're done.
     if invariant_violators.is_empty() {
@@ -217,7 +218,7 @@ pub fn enforce_disjunction_invariant(
     // For each invariant violator, find (or create) a Pedersen
     // commitment in the root disjunction branch for it.
     let invariant_violator_pedersens: HashMap<Ident, PedersenAssignment> = invariant_violators
-        .drain()
+        .into_iter()
         .map(|id| {
             // Check if the private Scalar is a vector variable or
             // not
@@ -400,7 +401,9 @@ pub fn enforce_disjunction_invariant(
         // new name (using the _same_ commitment value we computed in
         // the root Pedersen commitment) into this disjunction branch.
         // This binds the new name to the old name.
-        for id in ids_renamed {
+        let mut renamed_ids: Vec<_> = ids_renamed.into_iter().collect();
+        renamed_ids.sort_by_key(|id| id.to_string());
+        for id in renamed_ids {
             // Is it a vector variable?
             let is_vec = if let Some(TaggedIdent::Scalar(TaggedScalar { is_vec, .. })) =
                 vars.get(&id.to_string())

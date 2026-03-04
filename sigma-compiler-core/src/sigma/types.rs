@@ -10,7 +10,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use syn::parse::Result;
 use syn::spanned::Spanned;
 use syn::{parse_quote, Error, Expr, Ident};
@@ -97,7 +97,7 @@ impl From<&str> for AExprType {
 
 /// A dictionary of known variables (given by [`String`]s), mapping each
 /// to their [`AExprType`]
-pub type VarDict = HashMap<String, AExprType>;
+pub type VarDict = BTreeMap<String, AExprType>;
 
 /// Create a [`VarDict`] from a slice of pairs of strings.
 ///

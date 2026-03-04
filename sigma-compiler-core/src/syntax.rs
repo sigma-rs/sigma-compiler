@@ -3,7 +3,7 @@
 use super::sigma::combiners::StatementTree;
 use super::sigma::types::*;
 use quote::format_ident;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream, Result};
@@ -183,7 +183,7 @@ impl From<&TaggedIdent> for AExprType {
 /// mapping the string version of [`struct@Ident`]s to [`TaggedIdent`],
 /// which includes their type ([`Scalar`](TaggedIdent::Scalar) or
 /// [`Point`](TaggedIdent::Point))
-pub type TaggedVarDict = HashMap<String, TaggedIdent>;
+pub type TaggedVarDict = BTreeMap<String, TaggedIdent>;
 
 /// Convert a [`TaggedVarDict`] (a map from [`String`] to
 /// [`TaggedIdent`]) into the equivalent [`VarDict`] (a map from
@@ -197,7 +197,8 @@ pub fn taggedvardict_to_vardict(vd: &TaggedVarDict) -> VarDict {
 /// Collect the list of [`Point`](TaggedIdent::Point)s tagged `cind`
 /// from the given [`TaggedVarDict`]
 pub fn collect_cind_points(vars: &TaggedVarDict) -> Vec<Ident> {
-    vars.values()
+    let mut points: Vec<Ident> = vars
+        .values()
         .filter_map(|ti| {
             if let TaggedIdent::Point(TaggedPoint {
                 is_cind: true,
@@ -211,14 +212,18 @@ pub fn collect_cind_points(vars: &TaggedVarDict) -> Vec<Ident> {
                 None
             }
         })
-        .collect()
+        .collect();
+
+    // Ensure deterministic selection order regardless of HashMap iteration order.
+    points.sort_by_key(|id| id.to_string());
+    points
 }
 
 #[cfg(test)]
 /// Convert a list of strings describing `Scalar`s and a list of strings
 /// describing `Point`s into a [`TaggedVarDict`]
 pub fn taggedvardict_from_strs((scalar_strs, point_strs): (&[&str], &[&str])) -> TaggedVarDict {
-    let mut vars = HashMap::new();
+    let mut vars = BTreeMap::new();
 
     for scalar in scalar_strs {
         let ts: TaggedScalar = syn::parse_str(scalar).unwrap();
@@ -279,7 +284,7 @@ impl Parse for SigmaCompSpec {
         };
         input.parse::<Token![,]>()?;
 
-        let mut vars: TaggedVarDict = HashMap::new();
+        let mut vars: TaggedVarDict = BTreeMap::new();
 
         let scalars = paren_taggedidents::<TaggedScalar>(input)?;
         vars.extend(
